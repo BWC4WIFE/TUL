@@ -1,0 +1,43 @@
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\MainActivity.kt
+==== START OF MainActivity.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\audio\AudioHandler.kt
+==== START OF AudioHandler.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\audio\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\audio\AudioPlayer.kt
+==== START OF AudioPlayer.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\audio\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\ApiModels.kt
+==== START OF ApiModels.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\ServerModels.kt
+==== START OF ServerModels.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\TranslationRepository.kt
+==== START OF TranslationRepository.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\UIState.kt
+==== START OF UIState.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\data\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\network\WebSocketClient.kt
+==== START OF WebSocketClient.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\network\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\output\TextToSpeechManager.kt
+==== START OF TextToSpeechManager.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\output\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\TranslationAdapter.kt
+==== START OF TranslationAdapter.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\components\StatusBar.kt
+==== START OF StatusBar.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\components\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\components\TranslationList.kt
+==== START OF TranslationList.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\components\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\SettingsDialog.kt
+==== START OF SettingsDialog.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\UserSettingsDialogFragment.kt
+==== START OF UserSettingsDialogFragment.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\theme\Color.kt
+==== START OF Color.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\theme\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\theme\Theme.kt
+==== START OF Theme.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\theme\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\theme\Type.kt
+==== START OF Type.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\theme\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\view\MainScreen.kt
+==== START OF MainScreen.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\view\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\view\TranslationItem.kt
+==== START OF TranslationItem.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\ui\view\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\viewmodel\MainViewModel.kt
+==== START OF MainViewModel.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\viewmodel\
+Processing: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\viewmodel\MainViewModelFactory.kt
+==== START OF MainViewModelFactory.kt (Path: D:\GEMINI\BWC\TUL\app\src\main\java\com\bwc\translator2\viewmodel\
+

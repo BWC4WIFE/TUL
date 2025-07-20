@@ -1,0 +1,313 @@
+> Task :app:compileDebugKotlin
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:50:5 Expecting member declaration
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:50:19 Expecting member declaration
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:50:20 Expecting member declaration
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:50:27 Expecting member declaration
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:98:41 Expecting '}'
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:17:1 Class 'MainActivity' is not abstract and does not implement abstract member public abstract fun onRequestPermission(): Unit defined in com.bwc.translator2.ui.dialog.UserSettingsDialogFragment.UserSettingsListener
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:36:38 Unresolved reference: WebSocketClient
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:39:21 Unresolved reference: ViewModelProvider
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:50:27 Function declaration must have a name
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:51:19 Overload resolution ambiguity: 
+public final val events: [Error type: Return type for function cannot be resolved] defined in com.bwc.translator2.viewmodel.MainViewModel
+public final val events: [Error type: Unresolved type for SharedFlow<ViewEvent>]<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:51:42 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:54:57 Unresolved reference: showError
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:55:60 Unresolved reference: shareLogFile
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:56:44 Unresolved reference: ShowUserSettings
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:57:44 Unresolved reference: ShowDevSettings
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:65:24 Unresolved reference: show
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:65:29 Unresolved reference: supportFragmentManager
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:74:17 Unresolved reference: getSharedPreferences
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:75:20 'this' is not defined in this context
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:75:26 'this' is not defined in this context
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:78:1 Modifier 'override' is not applicable to 'top level function'
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:79:5 Unresolved reference: viewModel
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:82:1 Modifier 'override' is not applicable to 'top level function'
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:86:1 Modifier 'override' is not applicable to 'top level function'
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:87:5 Unresolved reference: viewModel
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:90:1 Modifier 'override' is not applicable to 'top level function'
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:91:5 Unresolved reference: viewModel
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:94:1 Modifier 'override' is not applicable to 'top level function'
+e: ///app/src/main/java/com/bwc/translator2/MainActivity.kt:95:5 Unresolved reference: viewModel
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:4:12 Unresolved reference: google
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:8:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:9:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:10:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:11:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:12:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:13:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:16:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:17:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:18:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:19:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:20:6 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:22:23 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:23:18 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:23:61 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:24:24 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:24:76 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:25:27 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:27:37 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:27:90 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/ServerModels.kt:28:20 Unresolved reference: SerializedName
+e: ///app/src/main/java/com/bwc/translator2/data/TranslationRepository.kt:15:43 Unresolved reference: array
+e: ///app/src/main/java/com/bwc/translator2/data/TranslationRepository.kt:23:43 Unresolved reference: array
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:14:30 Expecting comma or ')'
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:22:1 Expecting a top level declaration
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:5:9 Conflicting declarations: value-parameter statusText: String = ..., value-parameter statusText: String = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:5:9 Conflicting declarations: public final val statusText: String, public final val statusText: String
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:6:9 Conflicting declarations: value-parameter toolbarInfoText: String = ..., value-parameter toolbarInfoText: String = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:6:9 Conflicting declarations: public final val toolbarInfoText: String, public final val toolbarInfoText: String
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:7:9 Conflicting declarations: value-parameter isListening: Boolean = ..., value-parameter isListening: Boolean = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:7:9 Conflicting declarations: public final val isListening: Boolean, public final val isListening: Boolean
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:10:9 Conflicting declarations: value-parameter translations: List<Pair<String, Boolean>> = ..., value-parameter translations: List<Pair<String, Boolean>> = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:10:9 Conflicting declarations: public final val translations: List<Pair<String, Boolean>>, public final val translations: List<Pair<String, Boolean>>
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:13:9 Conflicting declarations: value-parameter showDebugOverlay: Boolean = ..., value-parameter showDebugOverlay: Boolean = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:13:9 Conflicting declarations: public final val showDebugOverlay: Boolean, public final val showDebugOverlay: Boolean
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:14:9 Conflicting declarations: value-parameter debugLog: String = ..., value-parameter debugLog: String = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:14:9 Conflicting declarations: public final val debugLog: String, public final val debugLog: String
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:15:9 Conflicting declarations: value-parameter toolbarInfoText: String = ..., value-parameter toolbarInfoText: String = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:15:9 Conflicting declarations: public final val toolbarInfoText: String, public final val toolbarInfoText: String
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:16:9 Conflicting declarations: value-parameter isListening: Boolean = ..., value-parameter isListening: Boolean = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:16:9 Conflicting declarations: public final val isListening: Boolean, public final val isListening: Boolean
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:17:9 Conflicting declarations: value-parameter statusText: String = ..., value-parameter statusText: String = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:17:9 Conflicting declarations: public final val statusText: String, public final val statusText: String
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:18:9 Conflicting declarations: value-parameter translations: List<Pair<String, Boolean>> = ..., value-parameter translations: List<Pair<String, Boolean>> = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:18:9 Conflicting declarations: public final val translations: List<Pair<String, Boolean>>, public final val translations: List<Pair<String, Boolean>>
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:19:9 Conflicting declarations: value-parameter showDebugOverlay: Boolean = ..., value-parameter showDebugOverlay: Boolean = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:19:9 Conflicting declarations: public final val showDebugOverlay: Boolean, public final val showDebugOverlay: Boolean
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:20:9 Conflicting declarations: value-parameter debugLog: String = ..., value-parameter debugLog: String = ...
+e: ///app/src/main/java/com/bwc/translator2/data/UIState.kt:20:9 Conflicting declarations: public final val debugLog: String, public final val debugLog: String
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:6:12 Unresolved reference: google
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:10:8 Unresolved reference: okhttp3
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:11:8 Unresolved reference: okio
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:13:8 Unresolved reference: okhttp3
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:37:28 Unresolved reference: WebSocket
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:41:24 Unresolved reference: Gson
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:45:26 Unresolved reference: OkHttpClient
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:98:23 Unresolved reference: Request
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:102:59 Unresolved reference: okhttp3
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:103:13 'onOpen' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:103:44 Unresolved reference: WebSocket
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:103:65 Unresolved reference: Response
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:107:13 'onMessage' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:107:47 Unresolved reference: WebSocket
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:111:13 'onMessage' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:111:47 Unresolved reference: WebSocket
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:111:65 Unresolved reference: ByteString
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:115:13 'onClosing' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:115:47 Unresolved reference: WebSocket
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:119:13 'onFailure' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:119:47 Unresolved reference: WebSocket
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:119:82 Unresolved reference: Response
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:125:47 Unresolved reference: Response
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:141:44 Unresolved reference: ByteString
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:156:64 Unresolved reference: Response
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:210:45 Unresolved reference: HttpLoggingInterceptor
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:211:16 Unresolved reference: HttpLoggingInterceptor
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:211:41 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:214:19 Unresolved reference: level
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:214:27 Unresolved reference: HttpLoggingInterceptor
+e: ///app/src/main/java/com/bwc/translator2/network/WebSocketClient.kt:232:47 Unresolved reference: Response
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:5:17 Unresolved reference: recyclerview
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:6:17 Unresolved reference: recyclerview
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:7:17 Unresolved reference: recyclerview
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:8:28 Unresolved reference: databinding
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:10:28 Unresolved reference: ListAdapter
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:12:5 'onCreateViewHolder' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:13:23 Unresolved reference: ItemTranslationBinding
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:21:5 'onBindViewHolder' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:22:21 Unresolved reference: getItem
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:25:43 Unresolved reference: ItemTranslationBinding
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:26:9 Unresolved reference: RecyclerView
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:29:13 Not enough information to infer type variable R
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:30:33 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:31:30 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:39:34 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:40:33 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:41:30 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:46:37 Unresolved reference: DiffUtil
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:47:9 'areItemsTheSame' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/TranslationAdapter.kt:51:9 'areContentsTheSame' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:15:28 Unresolved reference: databinding
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:36:35 Unresolved reference: DialogSettingsBinding
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:45:19 Unresolved reference: DialogSettingsBinding
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:57:48 Unresolved reference: array
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:74:48 Unresolved reference: array
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:105:67 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:105:74 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:118:63 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:118:70 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:133:62 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:133:69 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:141:32 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:142:26 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:145:34 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/SettingsDialog.kt:152:36 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:13:28 Unresolved reference: databinding
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:14:12 Unresolved reference: google
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:15:12 Unresolved reference: google
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:16:12 Unresolved reference: google
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:18:36 Unresolved reference: BottomSheetDialogFragment
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:24:27 Unresolved reference: DialogUserSettingsBinding
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:28:5 'onAttach' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:29:15 Unresolved reference: onAttach
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:37:5 'onCreateView' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:41:20 Unresolved reference: DialogUserSettingsBinding
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:45:5 'onCreateDialog' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:46:28 Unresolved reference: onCreateDialog
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:48:64 Unresolved reference: R
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:50:32 Unresolved reference: BottomSheetBehavior
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:51:26 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:51:34 Unresolved reference: BottomSheetBehavior
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:52:26 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:58:5 'onViewCreated' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:59:15 Unresolved reference: onViewCreated
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:62:13 Unresolved reference: dismiss
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:65:65 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:65:68 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:67:28 Unresolved reference: requireContext
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:71:28 Unresolved reference: requireContext
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:72:13 Unresolved reference: dismiss
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:75:47 Unresolved reference: requireContext
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:76:42 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:79:17 Unresolved reference: dismiss
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:82:42 Variable expected
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:86:5 'onDetach' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:87:15 Unresolved reference: onDetach
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:91:5 'onDestroyView' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/ui/dialog/UserSettingsDialogFragment.kt:92:15 Unresolved reference: onDestroyView
+e: ///app/src/main/java/com/bwc/translator2/ui/view/MainScreen.kt:66:72 Unresolved reference: ic_settings
+e: ///app/src/main/java/com/bwc/translator2/ui/view/MainScreen.kt:123:52 Destructuring declaration initializer of type Int must have a 'component1()' function
+e: ///app/src/main/java/com/bwc/translator2/ui/view/MainScreen.kt:123:58 Destructuring declaration initializer of type Int must have a 'component2()' function
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:7:27 Expecting a top level declaration
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:7:29 Expecting a top level declaration
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:7:33 Expecting a top level declaration
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:7:34 Expecting a top level declaration
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:7:42 imports are only allowed in the beginning of file
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:368:10 Missing '}
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:7:16 Packages cannot be imported
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:8:33 Unresolved reference: UIState
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:18:31 Unresolved reference: DebugLog
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:22:49 Unresolved reference: UIState
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:25:21 Conflicting declarations: private final val _events: MutableSharedFlow<MainViewModel.ViewEvent>, private final val _events: MutableSharedFlow<MainViewModel.ViewEvent>
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:26:13 Conflicting declarations: public final val events: [Error type: Return type for function cannot be resolved], public final val events: [Error type: Unresolved type for SharedFlow<ViewEvent>]<MainViewModel.ViewEvent>
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:26:22 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:28:17 Conflicting declarations: private final val _events: MutableSharedFlow<MainViewModel.ViewEvent>, private final val _events: MutableSharedFlow<MainViewModel.ViewEvent>
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:29:9 Conflicting declarations: public final val events: [Error type: Return type for function cannot be resolved], public final val events: [Error type: Unresolved type for SharedFlow<ViewEvent>]<MainViewModel.ViewEvent>
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:29:17 Unresolved reference: SharedFlow
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:29:41 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:31:18 Conflicting declarations: public sealed class ViewEvent, public sealed class ViewEvent
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:38:75 Unresolved reference: Context
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:47:34 Unresolved reference: WebSocketClient
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:48:31 Unresolved reference: Job
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:50:28 Unresolved reference: google
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:72:70 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:72:93 Unresolved reference: ShowUserSettings
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:73:69 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:73:92 Unresolved reference: ShowDevSettings
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:79:27 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:94:27 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:96:27 Unresolved reference: webSocketFactory
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:97:23 Cannot access 'application': it is invisible (private in a supertype) in 'MainViewModel'
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:98:22 Unresolved reference: WebSocketClient
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:105:37 Unresolved reference: Constant
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:108:33 Unresolved reference: WebSocketClient
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:109:17 'onOpen' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:110:17 'onMessage' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:111:17 'onClosing' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:112:17 'onFailure' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:112:64 Unresolved reference: okhttp3
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:113:17 'onSetupComplete' overrides nothing
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:115:18 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:121:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:135:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:145:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:157:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:165:27 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:170:13 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:175:64 Unresolved reference: okhttp3
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:181:13 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:188:48 Unresolved reference: ServerResponse
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:191:21 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:191:45 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:192:37 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:206:48 Unresolved reference: ServerResponse
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:208:50 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:211:29 Overload resolution ambiguity: 
+public open fun append(p0: StringBuffer!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Any!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Boolean): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Char): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: CharArray!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: CharSequence!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Double): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Float): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Int): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Long): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: String!): StringBuilder! defined in java.lang.StringBuilder
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:216:51 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:219:36 Overload resolution ambiguity: 
+public open fun append(p0: StringBuffer!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Any!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Boolean): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Char): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: CharArray!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: CharSequence!): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Double): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Float): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Int): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: Long): StringBuilder! defined in java.lang.StringBuilder
+public open fun append(p0: String!): StringBuilder! defined in java.lang.StringBuilder
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:224:46 Unresolved reference: ServerResponse
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:225:51 Overload resolution ambiguity: 
+public inline fun <T> Iterable<TypeVariable(T)>.forEach(action: (TypeVariable(T)) -> Unit): Unit defined in kotlin.collections
+public inline fun <K, V> Map<out TypeVariable(K), TypeVariable(V)>.forEach(action: (Map.Entry<TypeVariable(K), TypeVariable(V)>) -> Unit): Unit defined in kotlin.collections
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:225:61 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:226:42 Cannot infer a type for this parameter. Please specify it explicitly.
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:233:49 Unresolved reference: ServerResponse
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:244:31 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:251:27 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:254:13 Unresolved reference: delay
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:267:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:277:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:288:17 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:297:13 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:303:13 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:311:21 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:315:21 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:321:37 Overload resolution ambiguity: 
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+private final val _events: MutableSharedFlow<MainViewModel.ViewEvent> defined in com.bwc.translator2.viewmodel.MainViewModel
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:327:29 Unresolved reference: SimpleDateFormat
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:327:62 Unresolved reference: Locale
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:327:90 Unresolved reference: Date
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:329:17 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:329:39 Unresolved reference: it
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModel.kt:362:22 Conflicting declarations: public sealed class ViewEvent, public sealed class ViewEvent
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModelFactory.kt:17:34 Type mismatch: inferred type is Application but AudioHandler was expected
+e: ///app/src/main/java/com/bwc/translator2/viewmodel/MainViewModelFactory.kt:17:61 Type mismatch: inferred type is WebSocketClient.Companion but Application was expected
+
+> Task :app:compileDebugKotlin FAILED
+
