@@ -1,0 +1,1 @@
+Refractored from BWC to use ViewModel
