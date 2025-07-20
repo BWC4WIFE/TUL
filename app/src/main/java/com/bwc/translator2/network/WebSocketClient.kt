@@ -7,10 +7,13 @@ import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import okhttp3.*
-import okio.ByteString
-import java.io.File
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import okhttp3.logging.HttpLoggingInterceptor
+import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.util.concurrent.TimeUnit
@@ -20,8 +23,10 @@ class WebSocketClient private constructor(
     private val config: WebSocketConfig,
     private val listener: WebSocketListener
 ) {
+
     companion object {
         private const val TAG = "WebSocketClient"
+    }
 
         // Modified: Moved the 'create' function directly into the companion object
         fun create(

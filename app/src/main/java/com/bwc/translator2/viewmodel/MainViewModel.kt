@@ -1,41 +1,29 @@
-package com.bwc.translator.viewmodel
+package com.bwc.translator2.viewmodel
 
 import android.app.Application
+import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bwc.translator2.audio.AudioHandler
-import com.bwc.translator2.util.DebugLog
-import com.bwc.translator2.data.UiState
+import com.bwc.translator2.data.UIState
+import com.bwc.translator2.network.WebSocketClient
+import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
-sealed class ViewEvent {
-    data class ShowToast(val message: String) : ViewEvent()
-    data class ShowError(val message: String) : ViewEvent()
-    data class ShareLogFile(val uri: android.net.Uri) : ViewEvent()
-    object ShowUserSettings : ViewEvent()
-    object ShowDevSettings : ViewEvent()
-}
-
-sealed class UserEvent {
-    object MicClicked : UserEvent()
-    object ConnectClicked : UserEvent()
-    object SettingsSaved : UserEvent()
-    object RequestPermission : UserEvent()
-    object ShareLogRequested : UserEvent()
-    object ClearLogRequested : UserEvent()
-    object UserSettingsClicked : UserEvent()
-    object DevSettingsClicked : UserEvent()
-}
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import java.util.concurrent.TimeUnit
 
 class MainViewModel(
+    application: Application,
     private val audioHandler: AudioHandler,
-    private val debugLog: DebugLog,
-    application: Application
+    private val webSocketFactory: WebSocketClient.Companion
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(UIState())
@@ -44,89 +32,99 @@ class MainViewModel(
     private val _events = MutableSharedFlow<ViewEvent>()
     val events = _events.asSharedFlow()
 
-    fun handleEvent(event: UserEvent) {
-        when (event) {
-            UserEvent.MicClicked -> toggleRecording()
-            UserEvent.ConnectClicked -> toggleConnection()
-            UserEvent.SettingsSaved -> reloadConfiguration()
-            UserEvent.RequestPermission -> checkAudioPermission()
-            UserEvent.ShareLogRequested -> handleShareLog()
-            UserEvent.ClearLogRequested -> clearDebugLog()
-            UserEvent.UserSettingsClicked -> viewModelScope.launch { _events.emit(ViewEvent.ShowUserSettings) }
-            UserEvent.DevSettingsClicked -> viewModelScope.launch { _events.emit(ViewEvent.ShowDevSettings) }
-        }
-    }
+    private var webSocket: WebSocket? = null
+    private var currentSessionId: String = generateSessionId()
 
-    private fun handleShareLog() {
-        val logFile = debugLog.getLogFile(getApplication<Application>().applicationContext)
-        if (logFile != null) {
-            viewModelScope.launch {
-                _events.emit(ViewEvent.ShareLogFile(logFile))
-            }
-        } else {
-            viewModelScope.launch {
-                _events.emit(ViewEvent.ShowToast("Log file not found."))
-            }
-        }
-    }
-
-    private fun clearDebugLog() {
-        debugLog.clearLog(getApplication<Application>().applicationContext)
-        viewModelScope.launch { _events.emit(ViewEvent.ShowToast("Debug log cleared.")) }
-    }
-
-    private fun toggleRecording() {
-        if (_uiState.value.isRecording) {
-            audioHandler.stopRecording()
-            _uiState.update { it.copy(isRecording = false) }
-        } else {
-            // Check for permission before starting to record.
-            if (audioHandler.hasRecordAudioPermission(getApplication())) {
-                audioHandler.startRecording()
-                _uiState.update { it.copy(isRecording = true) }
-            } else {
-                // If permission is missing, signal the UI to ask for it.
-                viewModelScope.launch { _events.emit(ViewEvent.ShowError("Microphone permission is required to record.")) }
-            }
-        }
-    }
-
-    private fun toggleConnection() {
-        // This assumes the AudioHandler manages the connection lifecycle.
-        if (_uiState.value.isConnected) {
-            audioHandler.stop()
-            _uiState.update { it.copy(isConnected = false) }
-        } else {
-            audioHandler.start()
-            _uiState.update { it.copy(isConnected = true) }
-        }
-    }
-
-    private fun reloadConfiguration() {
-        // This assumes the AudioHandler can dynamically reload its configuration.
+    fun sendAudio(audioData: ByteArray) {
         viewModelScope.launch {
-            audioHandler.reloadConfig()
-            _events.emit(ViewEvent.ShowToast("Configuration reloaded."))
+            try {
+                val base64Audio = Base64.encodeToString(audioData, Base64.NO_WRAP)
+                val messagePayload = mapOf(
+                    "audio_data" to base64Audio,
+                    "timestamp" to System.currentTimeMillis(),
+                    "session_id" to currentSessionId
+                )
+                val jsonMessage = Gson().toJson(messagePayload)
+                webSocket?.send(jsonMessage)
+
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        isSending = true,
+                        lastAudioSentTime = System.currentTimeMillis()
+                    )
+                }
+            } catch (e: Exception) {
+                _events.emit(ViewEvent.ShowError("Failed to send audio: ${e.message}"))
+                _uiState.update { it.copy(isSending = false) }
+            }
         }
     }
 
-    private fun checkAudioPermission() {
-        // This function is for explicitly checking permission, e.g., from a button.
-        if (audioHandler.hasRecordAudioPermission(getApplication())) {
-            viewModelScope.launch {
-                _events.emit(ViewEvent.ShowToast("Microphone permission is already granted."))
-            }
-        } else {
-            // Signal the UI that permission needs to be requested.
-            // The Activity should observe this and trigger the system's permission dialog.
-            viewModelScope.launch {
-                _events.emit(ViewEvent.ShowError("Please grant microphone permission via the system dialog."))
+    fun connectWebSocket() {
+        viewModelScope.launch {
+            try {
+                val client = OkHttpClient.Builder()
+                    .readTimeout(0, TimeUnit.MILLISECONDS)
+                    .build()
+
+                val request = Request.Builder()
+                    .url("wss://your-websocket-endpoint.com")
+                    .build()
+
+                webSocket = client.newWebSocket(request, object : WebSocketListener() {
+                    override fun onOpen(webSocket: WebSocket, response: Response) {
+                        _uiState.update { it.copy(isConnected = true) }
+                    }
+
+                    override fun onMessage(webSocket: WebSocket, text: String) {
+                        handleWebSocketMessage(text)
+                    }
+
+                    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
+                        _uiState.update { it.copy(isConnected = false) }
+                    }
+
+                    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+                        _events.emit(ViewEvent.ShowError("WebSocket error: ${t.message}"))
+                        _uiState.update { it.copy(isConnected = false) }
+                    }
+                })
+            } catch (e: Exception) {
+                _events.emit(ViewEvent.ShowError("Connection failed: ${e.message}"))
             }
         }
+    }
+
+    private fun generateSessionId(): String {
+        return "session_${System.currentTimeMillis()}"
+    }
+
+    private fun handleWebSocketMessage(message: String) {
+        // Implement message handling logic
     }
 
     override fun onCleared() {
         super.onCleared()
-        audioHandler.shutdown()
+        webSocket?.close(1000, "Activity destroyed")
+        audioHandler.stopRecording()
+    }
+
+    sealed class ViewEvent {
+        data class ShowToast(val message: String) : ViewEvent()
+        data class ShowError(val message: String) : ViewEvent()
+        data class ShareLogFile(val uri: android.net.Uri) : ViewEvent()
+        object ShowUserSettings : ViewEvent()
+        object ShowDevSettings : ViewEvent()
+    }
+
+    sealed class UserEvent {
+        object MicClicked : UserEvent()
+        object ConnectClicked : UserEvent()
+        object SettingsSaved : UserEvent()
+        object RequestPermission : UserEvent()
+        object ShareLogRequested : UserEvent()
+        object ClearLogRequested : UserEvent()
+        object UserSettingsClicked : UserEvent()
+        object DevSettingsClicked : UserEvent()
     }
 }

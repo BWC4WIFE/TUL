@@ -2,12 +2,13 @@ package com.bwc.translator2.data
 
 data class UIState(
     val statusText: String = "",
-    val sourceText: String = "",
-    val translatedText: String = "",
-    val isLoading: Boolean = false,
-    val isSending: Boolean = false,
-    val isReceiving: Boolean = false,
-    val shouldAutoTranslate: Boolean = true,
+    val toolbarInfoText: String = "",
+    val isListening: Boolean = false,
+    val translations: List<Pair<String, Boolean>> = emptyList(),
+    val showDebugOverlay: Boolean = false,
+    val debugLog: String = "",
     val isRecording: Boolean = false,
-    val isPermissionGranted: Boolean = false
+    val isConnected: Boolean = false,
+    val isSending: Boolean = false,
+    val lastAudioSentTime: Long = 0
 )

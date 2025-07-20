@@ -1,14 +1,3 @@
 <resources>
-    <string name="app_name">Thai Uncensored</string>
-
-    <string-array name="api_versions">
-        <item>v1alpha</item>
-        <item>v1</item>
-        <item>v1beta</item>
-        <item>v1beta1</item>
-    </string-array>
-       <string-array name="api_keys">
-        <item>Rayven:AIzaSyCBnpGnbCKy7gxqMkDkBuCc78Rf40D1auA</item>
-        <item>Lan1a:AIzaSyDsTrGpp8mrr470vQrztyz3SOSnoxdtQJc</item>
-    </string-array>
+    <string name="app_name">Thai Uncensored Language</string>
 </resources>
