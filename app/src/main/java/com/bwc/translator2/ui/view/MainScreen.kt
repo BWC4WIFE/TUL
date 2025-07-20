@@ -44,7 +44,7 @@ import com.bwc.translator2.ui.view.TranslationItem // Ensured import is present
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsState(initial = UiState())
     val listState = rememberLazyListState()
 
     Scaffold(

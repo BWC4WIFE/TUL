@@ -1,4 +1,4 @@
-package com.ui.dialog
+package com.bwc.translator2.ui.dialog
 
 import android.app.Dialog
 import android.content.Context

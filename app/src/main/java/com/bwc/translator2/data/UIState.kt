@@ -12,4 +12,11 @@ data class UiState(
     val isMicButtonEnabled: Boolean = false,
     val showDebugOverlay: Boolean = false,
     val debugLog: String = ""
+    val toolbarInfoText: String = "",
+    val isListening: Boolean = false,
+    val statusText: String = "",
+    val translations: List<Pair<String, Boolean>> = emptyList(),
+    val showDebugOverlay: Boolean = false,
+    val debugLog: String = ""
+)
 )

@@ -1,23 +1,18 @@
 package com.bwc.translator2
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.Modifier
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.ViewModelProvider
 import com.bwc.translator2.audio.AudioHandler
-import com.bwc.translator2.network.WebSocketClient
+import com.bwc.translator2.ui.dialog.SettingsDialog
+import com.bwc.translator2.ui.dialog.UserSettingsDialogFragment
+import com.bwc.translator2.ui.view.MainScreen
 import com.bwc.translator2.viewmodel.MainViewModel
 import com.bwc.translator2.viewmodel.MainViewModelFactory
-import com.bwc.translator2.ui.view.MainScreen
-import com.ui.dialog.SettingsDialog
-import com.ui.dialog.UserSettingsDialogFragment
-import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity(), UserSettingsDialogFragment.UserSettingsListener, SettingsDialog.DevSettingsListener {
 
