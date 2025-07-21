@@ -94,6 +94,7 @@ android {
 dependencies {
     // Core & Lifecycle
     implementation(libs.androidx.core.ktx)
+    implementation("androidx.activity:activity-ktx:1.8.8")
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
@@ -105,6 +106,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("androidx.fragment:fragment-ktx:1.8.0")
+    implementation("com.google.android.material:material:1.12.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)

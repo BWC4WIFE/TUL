@@ -4,10 +4,8 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.bwc.translator2.R
 import com.bwc.translator2.audio.AudioHandler
 import com.bwc.translator2.audio.AudioPlayer
 import com.bwc.translator2.data.ServerResponse
@@ -25,7 +23,6 @@ import kotlinx.coroutines.launch
 import okhttp3.Response
 import okhttp3.WebSocket
 import okio.ByteString
-import java.io.File
 
 class MainViewModel(
     application: Application,
@@ -54,13 +51,13 @@ class MainViewModel(
                 UserEvent.DisconnectClicked -> disconnectWebSocket()
                 UserEvent.SettingsSaved -> {
                     reloadConfiguration()
-                    events.emit(ViewEvent.ShowToast("Settings Saved. Please reconnect."))
+                    _events.emit(ViewEvent.ShowToast("Settings Saved. Please reconnect."))
                 }
-                UserEvent.RequestPermission -> events.emit(ViewEvent.ShowUserSettings) // Let activity handle
+                UserEvent.RequestPermission -> _events.emit(ViewEvent.ShowUserSettings) // Let activity handle
                 UserEvent.ShareLogRequested -> handleShareLog()
                 UserEvent.ClearLogRequested -> clearDebugLog()
-                UserEvent.UserSettingsClicked -> events.emit(ViewEvent.ShowUserSettings)
-                UserEvent.DevSettingsClicked -> events.emit(ViewEvent.ShowDevSettings)
+                UserEvent.UserSettingsClicked -> _events.emit(ViewEvent.ShowUserSettings)
+                UserEvent.DevSettingsClicked -> _events.emit(ViewEvent.ShowDevSettings)
             }
         }
     }
@@ -101,6 +98,7 @@ class MainViewModel(
             )
         }
     }
+
 
     private fun toggleRecording() {
         if (!_uiState.value.isConnected) {
@@ -187,14 +185,14 @@ class MainViewModel(
 
     private fun handleShareLog() = viewModelScope.launch {
         logger.getLogFileUri(getApplication())?.let { uri ->
-            events.emit(ViewEvent.ShareLogFile(uri))
-        } ?: events.emit(ViewEvent.ShowToast("Log file not available."))
+            _events.emit(ViewEvent.ShareLogFile(uri))
+        } ?: _events.emit(ViewEvent.ShowToast("Log file not available."))
     }
 
     private fun clearDebugLog() = viewModelScope.launch {
         logger.clear()
         _uiState.update { it.copy(debugLog = "") }
-        events.emit(ViewEvent.ShowToast("On-screen log cleared."))
+        _events.emit(ViewEvent.ShowToast("On-screen log cleared."))
     }
 
     private fun logStatus(message: String) {
@@ -206,7 +204,7 @@ class MainViewModel(
     private fun logError(message: String) {
         Log.e("MainViewModel", message)
         logger.log("ERROR: $message")
-        viewModelScope.launch { events.emit(ViewEvent.ShowError(message)) }
+        viewModelScope.launch { _events.emit(ViewEvent.ShowError(message)) }
         _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
     }
 
