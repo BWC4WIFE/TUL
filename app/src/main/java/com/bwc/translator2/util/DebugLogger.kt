@@ -1,7 +1,6 @@
 package com.bwc.translator2.util
 
 import android.content.Context
-
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -11,7 +10,6 @@ import java.util.Date
 import java.util.Locale
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.bwc.translator2.ui.theme.ThaiUncensoredLanguageTheme
 
 
@@ -47,7 +45,7 @@ object DebugLogger {
     @Synchronized
     fun getLogFileUri(context: Context): Uri? {
         return try {
-            val logDir = File(context.cacheDir, "logs")
+            val logDir = File(context.getExternalFilesDir(null), "logs")
             logDir.mkdirs()
             logFile = File(logDir, "debug_log_${System.currentTimeMillis()}.txt")
             logFile?.writeText(getLog())
@@ -61,18 +59,5 @@ object DebugLogger {
             Log.e(TAG, "Error creating log file URI", e)
             null
         }
-    }
-}@Preview(showBackground = true)
-@Composable
-fun DebugLogPreview() {
-    ThaiUncensoredLanguageTheme {
-        val sampleLog = """
-            Connecting...
-            Connection open, sending setup...
-            OUT: {"setup":{...}}
-            IN: {"setupComplete":true}
-            Setup complete. Ready to talk.
-        """.trimIndent()
-        DebugLogger(logText = sampleLog, onClearClick = {})
     }
 }

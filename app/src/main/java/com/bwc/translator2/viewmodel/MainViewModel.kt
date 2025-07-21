@@ -12,6 +12,7 @@ import com.bwc.translator2.data.ServerResponse
 import com.bwc.translator2.data.UIState
 import com.bwc.translator2.network.WebSocketClient
 import com.bwc.translator2.network.WebSocketConfig
+import com.bwc.translator2.ui.TranslationItem
 import com.bwc.translator2.ui.components.Constant
 import com.bwc.translator2.util.DebugLogger
 import com.google.gson.Gson
@@ -21,6 +22,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
 
 class MainViewModel(
     application: Application,
@@ -197,13 +199,15 @@ class MainViewModel(
 
     private fun addOrUpdateTranslation(text: String, isUser: Boolean) {
         _uiState.update { currentState ->
-            val translations = currentState.translations.toMutableList()
-            if (translations.isNotEmpty() && translations.first().second == isUser) {
-                translations[0] = text to isUser
-            } else {
-                translations.add(0, text to isUser)
+            val newItem = TranslationItem(text = text, isUser = isUser)
+            val newTranslations = currentState.translations.toMutableList().apply {
+                if (isNotEmpty() && first().isUser == isUser) {
+                    set(0, newItem)
+                } else {
+                    add(0, newItem)
+                }
             }
-            currentState.copy(translations = translations)
+            currentState.copy(translations = newTranslations)
         }
     }
 

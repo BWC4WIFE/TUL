@@ -27,9 +27,6 @@ import com.bwc.translator2.data.UIState // Assuming UIState is defined in this p
 import com.bwc.translator2.ui.components.StatusBar // CORRECTED: Proper import for StatusBar
 import com.bwc.translator2.ui.theme.ThaiUncensoredLanguageTheme
 import com.bwc.translator2.viewmodel.MainViewModel
-import com.bwc.translator2.ui.view.TranslationItem
-
-// Data class representing a single translation item for the list
 
 
 // ===================================================================================
@@ -45,8 +42,13 @@ fun MainScreen(viewModel: MainViewModel) {
     MainScreenContent(
         uiState = uiState,
         onMicClick = { viewModel.handleEvent(MainViewModel.UserEvent.MicClicked) },
-        // Assuming your ViewModel handles the connect/disconnect logic
-      //  onConnectDisconnect = { viewModel.handleEvent(MainViewModel.UserEvent.ConnectDisconnectClicked) },
+        onConnectDisconnect = {
+                    if (uiState.isConnected) {
+                        viewModel.handleEvent(MainViewModel.UserEvent.DisconnectClicked)
+                    } else {
+                        viewModel.handleEvent(MainViewModel.UserEvent.ConnectClicked)
+                    }
+                },
         onSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.UserSettingsClicked) },
         onBackClick = { /* Handle back navigation or ViewModel event */ }
         // Note: History icon click is not handled by ViewModel event here, consider adding it if needed.
@@ -137,12 +139,13 @@ fun MainScreenContent(
                     reverseLayout = true,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(uiState.translations) { item -> // 'item' is already a TranslationItem, no need for destructuring
-                        // Assuming TranslationItemComposable exists and works with TranslationItem
-                        // If TranslationItemComposable is not defined, use a simple Text for preview purposes.
-                        // For this example, I'll keep the placeholder comment or use a simple Text.
-                        TranslationItemComposable(item = item)
-                        Text(text = "${if(item.isUser) "You" else "Them"}: ${item.text}", modifier = Modifier.padding(8.dp).fillMaxWidth())
+                    items(uiState.translations) { item ->
+                        TranslationItemComposable(item = TranslationItem(
+                            text = item.text,
+                            isUser = item.isUser)
+                        )
+
+
                     }
                 }
             }
@@ -213,8 +216,12 @@ fun MainScreenConnectedListeningPreview() {
                 isReady = true,
                 isListening = true,
                 translations = listOf(
-                    TranslationItem("Hello, how are you?", true),
-                    TranslationItem("I'm doing well, thank you!", false)
+                    TranslationItem(
+                        text = "Hello, how are you?",
+                        isUser = true),
+                    TranslationItem(
+                        text = "I'm doing well, thank you!",
+                        isUser = false)
                 ),
                 showDebugOverlay = true,
                 debugLog = "Audio processing: ON | Connection: Stable"
@@ -236,10 +243,17 @@ fun MainScreenConnectedNotListeningPreview() {
                 statusText = "Connected. Ready to listen.",
                 toolbarInfoText = "Session active, 1 participant",
                 isReady = true,
-                isListening = false, // Not listening
+                isListening = false,
+                isConnected = true,
                 translations = listOf(
-                    TranslationItem("Previous translation 1.", true),
-                    TranslationItem("Previous translation 2.", false)
+                    TranslationItem(
+                        text = "Hello, how are you?",
+                        isUser = true
+                    ),
+                    TranslationItem(
+                        text = "สวัสดี คุณเป็นอย่างไรบ้าง",
+                        isUser = false
+                    )
                 ),
                 showDebugOverlay = false,
                 debugLog = ""
