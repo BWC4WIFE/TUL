@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ThaiUncensoredLanguage" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.ThaiUncensoredLanguage" parent="Theme.Material3.DayNight.NoActionBar">
+        <!--
+        You can add custom theme attributes here for your app, for example:
+        <item name="colorPrimary">@color/my_primary_color</item>
+        <item name="colorSecondary">@color/my_secondary_color</item>
+        -->
+    </style>
+
 </resources>

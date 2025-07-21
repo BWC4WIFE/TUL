@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import com.bwc.translator2.R
-import com.bwc.translator2.data.UiState
+import com.bwc.translator2.data.UIState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.text.style.TextAlign
@@ -44,7 +44,7 @@ import com.bwc.translator2.ui.view.TranslationItem // Ensured import is present
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
-    val uiState by viewModel.uiState.collectAsState(initial = UiState())
+    val uiState by viewModel.uiState.collectAsState
     val listState = rememberLazyListState()
 
     Scaffold(

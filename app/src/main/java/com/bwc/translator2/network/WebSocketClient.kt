@@ -9,39 +9,21 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.WebSocket
-import okhttp3.WebSocketListener
 import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
 import java.io.FileWriter
 import java.io.PrintWriter
 import java.util.concurrent.TimeUnit
 
-class WebSocketClient private constructor(
+class WebSocketClient(
     private val context: Context,
     private val config: WebSocketConfig,
     private val listener: WebSocketListener
 ) {
-
-    companion object {
-        private const val TAG = "WebSocketClient"
-    }
-
-        // Modified: Moved the 'create' function directly into the companion object
-        fun create(
-            context: Context,
-            config: WebSocketConfig,
-            listener: WebSocketListener
-        ): WebSocketClient {
-            return WebSocketClient(context, config, listener)
-        }
-        private const val SYS = "System_Instruction"
-    }
-
     private var webSocket: WebSocket? = null
     private var isSetupComplete = false
-    private var isConnected = false
+    @Volatile private var isConnected = false
     private val scope = CoroutineScope(Dispatchers.IO)
     private val gson = Gson()
     private var logFileWriter: PrintWriter? = null
@@ -55,47 +37,39 @@ class WebSocketClient private constructor(
 
     fun connect() {
         if (isConnected) return
-
         initializeLogging()
         initializeWebSocket()
     }
 
-    fun sendAudio(audioData: ByteArray) {
-        if (!isReady()) return
-
-        scope.launch {
-            try {
-                val message = createAudioMessage(audioData)
-                logMessage("OUTGOING AUDIO", "length=${audioData.size}")
-                webSocket?.send(message)
-            } catch (e: Exception) {
-                logError("Failed to send audio", e)
-            }
-        }
-    }
-
     fun disconnect() {
+        if (!isConnected) return
         scope.launch {
+            webSocket?.close(1001, "Client disconnected")
             cleanupResources()
         }
     }
 
-    fun getLogFile(): File? = logFile
-
-    fun isReady(): Boolean = isConnected && isSetupComplete
+    fun sendAudio(audioData: ByteArray) {
+        if (!isConnected || !isSetupComplete) {
+            logMessage("WARN", "Connection not ready, audio data dropped.")
+            return
+        }
+        val audioMessage = createAudioMessage(audioData)
+        webSocket?.send(audioMessage)
+        logMessage("OUTGOING AUDIO", "size=${audioData.size}")
+    }
 
     private fun initializeLogging() {
         try {
-            val logDir = File(context.getExternalFilesDir(null), "websocket_logs").apply {
-                mkdirs()
-            }
+            val logDir = File(context.getExternalFilesDir(null), "websocket_logs")
+            logDir.mkdirs()
             logFile = File(logDir, "session_${System.currentTimeMillis()}.log").apply {
                 logFileWriter = PrintWriter(FileWriter(this, true), true)
                 logFileWriter?.println("--- Session Started ${java.util.Date()} ---")
             }
         } catch (e: Exception) {
-            logError("Failed to initialize logging", e)
-            listener.onFailure(e, null)
+            Log.e(TAG, "Failed to initialize logging", e)
+            listener.onFailure(null, e, null)
         }
     }
 
@@ -104,96 +78,21 @@ class WebSocketClient private constructor(
             .url(buildWebSocketUrl())
             .build()
 
-        webSocket = client.newWebSocket(request, object : okhttp3.WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                handleWebSocketOpen(response)
-            }
-
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                handleTextMessage(text)
-            }
-
-            override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-                handleBinaryMessage(bytes)
-            }
-
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                handleWebSocketClosing(code, reason)
-            }
-
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                handleWebSocketFailure(t, response)
-            }
-        })
-    }
-
-    private fun handleWebSocketOpen(response: Response) {
-        scope.launch {
-            logMessage("CONNECTED", "HTTP ${response.code}")
-            isConnected = true
-            sendConfiguration()
-            listener.onOpen()
-        }
-    }
-
-    private fun handleTextMessage(text: String) {
-        scope.launch {
-            logMessage("INCOMING TEXT", text.take(300))
-            processMessage(text)
-        }
-    }
-
-    private fun handleBinaryMessage(bytes: ByteString) {
-        scope.launch {
-            logMessage("INCOMING BINARY", "size=${(bytes.size)}")
-            processMessage(bytes.utf8())
-        }
-    }
-
-    private fun handleWebSocketClosing(code: Int, reason: String) {
-        scope.launch {
-            logMessage("CLOSING", "code=$code reason=$reason")
-            cleanupResources()
-            listener.onClosing(code, reason)
-        }
-    }
-
-    private fun handleWebSocketFailure(t: Throwable, response: Response?) {
-        scope.launch {
-            logError("FAILURE", t)
-            cleanupResources()
-            listener.onFailure(t, response)
-        }
-    }
-
-    private fun processMessage(message: String) {
-        try {
-            if (message.contains("\"setupComplete\"")) {
-                isSetupComplete = true
-                listener.onSetupComplete()
-            }
-            listener.onMessage(message)
-        } catch (e: Exception) {
-            logError("Message processing failed", e)
-        }
-    }
-
-    private fun sendConfiguration() {
-        val configMessage = gson.toJson(config.createSetupMessage())
-        logMessage("CONFIG SENT", configMessage.take(300))
-        webSocket?.send(configMessage)
+        webSocket = client.newWebSocket(request, this.listener)
     }
 
     private fun cleanupResources() {
-        webSocket?.close(1000, "Normal closure")
+        if (!isConnected) return
+        isConnected = false
+        isSetupComplete = false
         webSocket = null
         logFileWriter?.apply {
             println("--- Session Ended ${java.util.Date()} ---")
             flush()
             close()
         }
-        isConnected = false
-        isSetupComplete = false
+        logFileWriter = null
+        logFile = null
     }
 
     private fun createAudioMessage(audioData: ByteArray): String {
@@ -205,6 +104,25 @@ class WebSocketClient private constructor(
                 )
             )
         ))
+    }
+
+    private fun processMessage(message: String) {
+        try {
+            if (message.contains("\"setupComplete\"")) {
+                isSetupComplete = true
+                (listener as? WebSocketListener)?.onSetupComplete()
+            }
+            listener.onMessage(null, message)
+        } catch (e: Exception) {
+            logError("Message processing failed", e)
+        }
+    }
+
+    fun sendConfiguration() {
+        val configMessage = gson.toJson(config.createSetupMessage())
+        logMessage("CONFIG SENT", configMessage.take(300))
+        webSocket?.send(configMessage)
+        isSetupComplete = true
     }
 
     private fun buildWebSocketUrl(): String {
@@ -230,11 +148,7 @@ class WebSocketClient private constructor(
         error.printStackTrace(logFileWriter)
     }
 
-    interface WebSocketListener {
-        fun onOpen()
-        fun onMessage(text: String)
-        fun onClosing(code: Int, reason: String)
-        fun onFailure(t: Throwable, response: Response?)
+    interface WebSocketListener : okhttp3.WebSocketListener {
         fun onSetupComplete()
     }
 
@@ -269,5 +183,9 @@ class WebSocketClient private constructor(
                 mapOf("text" to it.trim())
             })
         }
+    }
+
+    companion object {
+        private const val TAG = "WebSocketClient"
     }
 }

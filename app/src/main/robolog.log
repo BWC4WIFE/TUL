@@ -1,0 +1,121 @@
+
+-------------------------------------------------------------------------------
+   ROBOCOPY     ::     Robust File Copy for Windows                              
+-------------------------------------------------------------------------------
+
+  Started : Monday, July 21, 2025 9:16:37 AM
+   Source : D:\ANDROID\TUL\app\src\main\
+     Dest : D:\GEMINI\BWC\TUL\app\src\main\
+
+    Files : *.*
+	    
+  Options : *.* /V /TEE /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /R:1000000 /W:30 
+
+------------------------------------------------------------------------------
+
+	                   4	D:\ANDROID\TUL\app\src\main\
+	  *EXTRA File 		       0	robolog.log
+2025/07/21 09:16:37 ERROR 32 (0x00000020) Deleting Extra File D:\GEMINI\BWC\TUL\app\src\main\robolog.log
+The process cannot access the file because it is being used by another process.
+
+	          same		    1052	AndroidManifest.xml
+	    New File  		     465	conc.bat100%  
+	    New File  		   72405	kt_batch123.txt100%  
+	    New File  		   11484	xml_batch123.txt100%  
+	                   0	D:\ANDROID\TUL\app\src\main\java\
+	                   0	D:\ANDROID\TUL\app\src\main\java\com\
+	                   0	D:\ANDROID\TUL\app\src\main\java\com\bwc\
+	                   1	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\
+	    Newer     		    5050	MainActivity.kt100%  
+	                   2	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\audio\
+	          same		    4055	AudioHandler.kt
+	          same		    4181	AudioPlayer.kt
+	                   4	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\data\
+	      modified		     464	UIState.kt
+	          same		     942	ApiModels.kt
+	          same		    1696	ServerModels.kt
+	    Newer     		    1167	TranslationRepository.kt100%  
+	                   1	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\network\
+	    Newer     		    6565	WebSocketClient.kt100%  
+	                   1	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\output\
+	          same		    2114	TextToSpeechManager.kt
+	                   1	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\
+	          same		    2091	TranslationAdapter.kt
+	                   2	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\components\
+	          same		    1488	StatusBar.kt
+	          same		    8554	TranslationList.kt
+	                   2	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\
+	          same		    7518	SettingsDialog.kt
+	          same		    3359	UserSettingsDialogFragment.kt
+	                   3	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\theme\
+	          same		     283	Color.kt
+	          same		    1709	Theme.kt
+	          same		     988	Type.kt
+	                   2	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\view\
+	          same		    2564	TranslationItem.kt
+	    Newer     		    6513	MainScreen.kt100%  
+	  New Dir          1	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\util\
+	    New File  		    1783	DebugLogger.kt100%  
+	                   2	D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\viewmodel\
+	          same		     849	MainViewModelFactory.kt
+	    Newer     		   11455	MainViewModel.kt100%  
+	                   0	D:\ANDROID\TUL\app\src\main\res\
+	*EXTRA Dir        -1	D:\GEMINI\BWC\TUL\app\src\main\res\mipmap\
+	  *EXTRA File 		     256	ic_launcher.xml
+	  *EXTRA File 		     256	ic_launcher_round.xml
+	  *EXTRA File 		      91	backup_rules.xml
+	                   2	D:\ANDROID\TUL\app\src\main\res\drawable\
+	  *EXTRA File 		  136819	ic_arrow_back.xml
+	  *EXTRA File 		     440	ic_close.xml
+	  *EXTRA File 		     602	ic_history.xml
+	  *EXTRA File 		    1299	ic_mic.xml
+	  *EXTRA File 		    3543	ic_settings.xml
+	  *EXTRA File 		  195898	ic_stop.xml
+	  *EXTRA File 		     451	is_swap_horiz.xml
+	          same		    5606	ic_launcher_background.xml
+	          same		    1702	ic_launcher_foreground.xml
+	                   2	D:\ANDROID\TUL\app\src\main\res\layout\
+	  *EXTRA File 		    7233	activity_main.xml
+	  *EXTRA File 		    1310	item_translation.xml
+	    Newer     		    2539	dialog_settings.xml100%  
+	    Newer     		    1925	dialog_user_settings.xml100%  
+	                   2	D:\ANDROID\TUL\app\src\main\res\mipmap-anydpi-v26\
+	          same		     343	ic_launcher.xml
+	          same		     343	ic_launcher_round.xml
+	                   2	D:\ANDROID\TUL\app\src\main\res\mipmap-hdpi\
+	          same		    1404	ic_launcher.webp
+	          same		    2898	ic_launcher_round.webp
+	                   2	D:\ANDROID\TUL\app\src\main\res\mipmap-mdpi\
+	          same		     982	ic_launcher.webp
+	          same		    1772	ic_launcher_round.webp
+	                   2	D:\ANDROID\TUL\app\src\main\res\mipmap-xhdpi\
+	          same		    1900	ic_launcher.webp
+	          same		    3918	ic_launcher_round.webp
+	                   2	D:\ANDROID\TUL\app\src\main\res\mipmap-xxhdpi\
+	          same		    2884	ic_launcher.webp
+	          same		    5914	ic_launcher_round.webp
+	                   2	D:\ANDROID\TUL\app\src\main\res\mipmap-xxxhdpi\
+	          same		    3844	ic_launcher.webp
+	          same		    7778	ic_launcher_round.webp
+	                   3	D:\ANDROID\TUL\app\src\main\res\values\
+	          same		     378	colors.xml
+	    Newer     		     495	strings.xml100%  
+	    Newer     		     407	themes.xml100%  
+	                   2	D:\ANDROID\TUL\app\src\main\res\xml\
+	  *EXTRA File 		     133	provider_paths.xml
+	          same		     478	backup_rules.xml
+	          same		     551	data_extraction_rules.xml
+
+------------------------------------------------------------------------------
+
+               Total    Copied   Skipped  Mismatch    FAILED    Extras
+    Dirs :        27         1        26         0         0         1
+   Files :        47        13        34         0         0        14
+   Bytes :   203.9 k   119.3 k    84.5 k         0         0   340.1 k
+   Times :   0:00:00   0:00:00                       0:00:00   0:00:00
+
+
+   Speed :            30563250 Bytes/sec.
+   Speed :            1748.843 MegaBytes/min.
+   Ended : Monday, July 21, 2025 9:16:37 AM
+
