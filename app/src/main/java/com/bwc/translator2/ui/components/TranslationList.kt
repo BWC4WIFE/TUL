@@ -1,5 +1,6 @@
 package com.bwc.translator2.ui.components
 
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.bwc.translator2.ui.theme.ThaiUncensoredLanguageTheme
 
 
 @Composable
@@ -135,4 +137,18 @@ You will encounter conversations involving sensitive or explicit topics. Adhere 
 *   **TARGET LANGUAGE ONLY:** If the input is Thai, output **ONLY** the final English translation. If the input is English, output **ONLY** the final Thai translation.
 *   **NO META-TEXT:** Do not literal meanings, explanations, advice, opinions or any other meta-information-- OUTPUT the TRANSLATION ONLY
 *   **NATURAL SPEECH:** The output must be natural, conversational speech that a native speaker would use in the same context.`"""
+}
+
+@Preview(showBackground = true)
+@Composable
+fun TranslationListPreview() {
+    ThaiUncensoredLanguageTheme {
+        val sampleTranslations = listOf(
+            "Hello, how can I help you?" to false, // AI
+            "I need to translate a sentence." to true, // User
+            "Of course, what is the sentence?" to false, // AI
+            "The quick brown fox jumps over the lazy dog." to true // User
+        )
+        TranslationList(translations = sampleTranslations)
+    }
 }

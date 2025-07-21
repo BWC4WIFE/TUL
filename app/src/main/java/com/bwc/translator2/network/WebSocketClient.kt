@@ -33,7 +33,7 @@ class WebSocketClient(
     interface WebSocketListener {
         fun onConnectionOpen()
         fun onSetupComplete() // Called when the server confirms setup.
-        fun onMessage(text: String) // For all messages after setup.
+        fun onMessage(text: String) // For all messages after setup
         fun onClose(reason: String)
         fun onError(message: String)
     }

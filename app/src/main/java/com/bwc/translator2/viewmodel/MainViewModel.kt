@@ -95,7 +95,7 @@ class MainViewModel(
     }
 
     private fun toggleRecording() {
-        if (!= _uiState.value.isReady) {
+        if (!_uiState.value.isReady) {
             logError("Not ready for audio. Please wait for setup.")
             return
         }

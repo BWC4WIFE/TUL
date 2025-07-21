@@ -1,50 +1,72 @@
 package com.bwc.translator2.ui.view
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import com.bwc.translator2.viewmodel.MainViewModel
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ThumbUp // Added import
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material.icons.filled.Phone // Added import
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
-import com.bwc.translator2.R
-import com.bwc.translator2.data.UIState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.ExperimentalMaterial3Api
-import com.bwc.translator2.ui.view.TranslationItemComposable // Ensured import is present
-import com.bwc.translator2.ui.view.TranslationItem // Ensured import is present
+import com.bwc.translator2.R
+import com.bwc.translator2.data.UIState // Assuming UIState is defined in this package or imported correctly
+import com.bwc.translator2.ui.components.StatusBar // CORRECTED: Proper import for StatusBar
+import com.bwc.translator2.ui.theme.ThaiUncensoredLanguageTheme
+import com.bwc.translator2.viewmodel.MainViewModel
+import com.bwc.translator2.ui.view.TranslationItem
+
+// Data class representing a single translation item for the list
 
 
+// ===================================================================================
+// 1. STATEFUL Composable: Connects to ViewModel and delegates to stateless content
+// ===================================================================================
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
+    // Collect UI State from ViewModel
     val uiState by viewModel.uiState.collectAsState()
+
+    // Pass collected state and event handlers to the stateless content composable
+    MainScreenContent(
+        uiState = uiState,
+        onMicClick = { viewModel.handleEvent(MainViewModel.UserEvent.MicClicked) },
+        // Assuming your ViewModel handles the connect/disconnect logic
+      //  onConnectDisconnect = { viewModel.handleEvent(MainViewModel.UserEvent.ConnectDisconnectClicked) },
+        onSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.UserSettingsClicked) },
+        onBackClick = { /* Handle back navigation or ViewModel event */ }
+        // Note: History icon click is not handled by ViewModel event here, consider adding it if needed.
+    )
+}
+
+// ===================================================================================
+// 2. STATELESS Composable: Receives all necessary data and callbacks as parameters
+//    Does NOT know about ViewModel directly. Easily previewable.
+// ===================================================================================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenContent(
+    uiState: UIState,
+    onMicClick: () -> Unit,
+    onConnectDisconnect: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onBackClick: () -> Unit,
+    // Add other event handlers as needed, e.g., onHistoryClick: () -> Unit
+) {
     val listState = rememberLazyListState()
 
     Scaffold(
@@ -57,62 +79,57 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
+                    IconButton(onClick = onBackClick) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.handleEvent(MainViewModel.UserEvent.UserSettingsClicked) }) {
-                        Icon(painter = painterResource(id = R.drawable.ic_settings), contentDescription = "Settings")
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
                     }
-                    IconButton(onClick = { /* Handle history click */ }) {
-                        Icon(Icons.Filled.ThumbUp, contentDescription = "History")
+                    IconButton(onClick = { /* Handle history click if needed, pass as parameter */ }) {
+                        // Using a placeholder icon, ensure you have one or pass it
+                        Icon(painter = painterResource(id = R.drawable.ic_history),
+                            contentDescription = "History") // CONSIDER: Using a more appropriate history icon if available, or just keeping the placeholder if Phone is intended for something else.
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.handleEvent(MainViewModel.UserEvent.MicClicked) },
+                onClick = onMicClick,
                 modifier = Modifier.padding(16.dp),
                 containerColor = if (uiState.isListening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
             ) {
-                  Icon(Icons.Filled.ThumbUp, contentDescription = "Mic")
-            //    Icon(painter = painterResource(id = R.drawable.ic_mic), contentDescription = "Mic")
+                Icon(painter = painterResource(id = R.drawable.ic_bj), contentDescription = "Mic")
             }
         },
         bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = uiState.statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = when {
-                        uiState.statusText.contains("error", ignoreCase = true) -> Color.Red
-                        uiState.isListening -> Color.Green
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    textAlign = TextAlign.Center
-                )
-            }
+            // CORRECTED: Use the dedicated StatusBar composable
+            StatusBar(
+                statusText = uiState.statusText,
+                toolbarInfoText = uiState.toolbarInfoText,
+                isSessionActive = uiState.isReady ,
+                onConnectDisconnect = onConnectDisconnect,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
             if (uiState.translations.isEmpty()) {
                 Text(
-                    text = uiState.statusText,
+                    // CORRECTED: More appropriate text for empty state when not listening
+                    text = if (uiState.isReady) "Start speaking..." else "Tap 'Connect' to begin",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp),
+                    textAlign = TextAlign.Center
                 )
             } else {
                 LazyColumn(
@@ -120,13 +137,18 @@ fun MainScreen(viewModel: MainViewModel) {
                     reverseLayout = true,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(uiState.translations) { (text, isUser) ->
-                        TranslationItemComposable(item = TranslationItem(text = text, isUser = isUser))
+                    items(uiState.translations) { item -> // 'item' is already a TranslationItem, no need for destructuring
+                        // Assuming TranslationItemComposable exists and works with TranslationItem
+                        // If TranslationItemComposable is not defined, use a simple Text for preview purposes.
+                        // For this example, I'll keep the placeholder comment or use a simple Text.
+                        TranslationItemComposable(item = item)
+                        Text(text = "${if(item.isUser) "You" else "Them"}: ${item.text}", modifier = Modifier.padding(8.dp).fillMaxWidth())
                     }
                 }
             }
         }
 
+        // Debug overlay remains as is
         if (uiState.showDebugOverlay) {
             Box(
                 modifier = Modifier
@@ -138,16 +160,94 @@ fun MainScreen(viewModel: MainViewModel) {
                 Text(
                     text = uiState.debugLog,
                     color = Color.Green,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace, // Using Compose's FontFamily
                     style = MaterialTheme.typography.bodySmall
                 )
             }
         }
     }
 
+    // Scroll to bottom when new item is added
     LaunchedEffect(uiState.translations.size) {
         if (uiState.translations.isNotEmpty()) {
             listState.animateScrollToItem(0)
         }
+    }
+}
+
+
+// ===================================================================================
+// 3. PREVIEWS: Only for the stateless MainScreenContent
+// ===================================================================================
+
+@Preview(showBackground = true, name = "Main Screen - Disconnected Empty")
+@Composable
+fun MainScreenDisconnectedEmptyPreview() {
+    ThaiUncensoredLanguageTheme {
+        MainScreenContent(
+            uiState = UIState(
+                statusText = "Disconnected",
+                toolbarInfoText = "Offline",
+                isReady = false,
+                isListening = false,
+                translations = emptyList(),
+                showDebugOverlay = false,
+                debugLog = ""
+            ),
+            onMicClick = {},
+            onConnectDisconnect = {},
+            onSettingsClick = {},
+            onBackClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Main Screen - Connected Listening")
+@Composable
+fun MainScreenConnectedListeningPreview() {
+    ThaiUncensoredLanguageTheme {
+        MainScreenContent(
+            uiState = UIState(
+                statusText = "Connected. Listening...",
+                toolbarInfoText = "Session active, 1 participant",
+                isReady = true,
+                isListening = true,
+                translations = listOf(
+                    TranslationItem("Hello, how are you?", true),
+                    TranslationItem("I'm doing well, thank you!", false)
+                ),
+                showDebugOverlay = true,
+                debugLog = "Audio processing: ON | Connection: Stable"
+            ),
+            onMicClick = {},
+            onConnectDisconnect = {},
+            onSettingsClick = {},
+            onBackClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Main Screen - Connected Not Listening")
+@Composable
+fun MainScreenConnectedNotListeningPreview() {
+    ThaiUncensoredLanguageTheme {
+        MainScreenContent(
+            uiState = UIState(
+                statusText = "Connected. Ready to listen.",
+                toolbarInfoText = "Session active, 1 participant",
+                isReady = true,
+                isListening = false, // Not listening
+                translations = listOf(
+                    TranslationItem("Previous translation 1.", true),
+                    TranslationItem("Previous translation 2.", false)
+                ),
+                showDebugOverlay = false,
+                debugLog = ""
+            ),
+            onMicClick = {},
+            onConnectDisconnect = {},
+            onSettingsClick = {},
+            onBackClick = {}
+        )
     }
 }

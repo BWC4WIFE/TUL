@@ -1,6 +1,7 @@
 package com.bwc.translator2.util
 
 import android.content.Context
+
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
@@ -8,6 +9,11 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import com.bwc.translator2.ui.theme.ThaiUncensoredLanguageTheme
+
 
 object DebugLogger {
     private const val TAG = "DebugLogger"
@@ -55,5 +61,18 @@ object DebugLogger {
             Log.e(TAG, "Error creating log file URI", e)
             null
         }
+    }
+}@Preview(showBackground = true)
+@Composable
+fun DebugLogPreview() {
+    ThaiUncensoredLanguageTheme {
+        val sampleLog = """
+            Connecting...
+            Connection open, sending setup...
+            OUT: {"setup":{...}}
+            IN: {"setupComplete":true}
+            Setup complete. Ready to talk.
+        """.trimIndent()
+        DebugLogger(logText = sampleLog, onClearClick = {})
     }
 }

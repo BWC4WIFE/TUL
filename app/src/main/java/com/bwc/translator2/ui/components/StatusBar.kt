@@ -11,6 +11,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
+/**
+ * A stateless component to display connection status and provide a connect/disconnect action.
+ * Previews for this component are handled in the screen that uses it.
+ */
 @Composable
 fun StatusBar(
     statusText: String,
@@ -23,7 +27,7 @@ fun StatusBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(horizontal = 8.dp) // Consistent padding
         ) {
             Text(
                 text = statusText,
