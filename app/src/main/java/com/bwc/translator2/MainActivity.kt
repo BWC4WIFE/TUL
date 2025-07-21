@@ -5,12 +5,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.lifecycleScope
 import com.bwc.translator2.audio.AudioHandler
 import androidx.activity.compose.setContent
+import androidx.fragment.app.Fragment
 import com.bwc.translator2.network.WebSocketClient
 import com.bwc.translator2.ui.dialog.SettingsDialog
 import com.bwc.translator2.ui.dialog.UserSettingsDialogFragment
@@ -19,7 +21,7 @@ import com.bwc.translator2.viewmodel.MainViewModel
 import com.bwc.translator2.viewmodel.MainViewModelFactory
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity(),
+class MainActivity : FragmentActivity(),
     UserSettingsDialogFragment.UserSettingsListener,
     SettingsDialog.DevSettingsListener {
 

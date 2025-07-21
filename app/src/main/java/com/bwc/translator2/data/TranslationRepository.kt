@@ -3,7 +3,7 @@ package com.bwc.translator2.data // Corrected package
 import android.content.SharedPreferences
 import android.content.res.Resources
 import com.bwc.translator2.R
-import com.bwc.translator2.data.ApiModels // (ApiVersion and ApiKeyInfo are in this package directly)
+import com.bwc.translator2.data.ApiVersion // (ApiVersion and ApiKeyInfo are in this package directly)
 
 class TranslationRepository(
     private val prefs: SharedPreferences,
