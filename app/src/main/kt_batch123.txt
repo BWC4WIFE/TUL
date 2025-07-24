@@ -1,48 +1,44 @@
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\MainActivity.kt --- 
-package com.bwc.translator2
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\MainActivity.kt --- 
+package com.bwc.tul
 
 import android.content.Context
+import android.util.Log
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.viewModels
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.fragment.app.commit
 import androidx.lifecycle.lifecycleScope
-import com.bwc.translator2.audio.AudioHandler
-import com.bwc.translator2.network.WebSocketClient
-import com.bwc.translator2.ui.dialog.SettingsDialog
-import com.bwc.translator2.ui.dialog.UserSettingsDialogFragment
-import com.bwc.translator2.ui.view.MainScreen
-import com.bwc.translator2.viewmodel.MainViewModel
-import com.bwc.translator2.viewmodel.MainViewModelFactory
+import com.bwc.tul.audio.AudioHandler
+import androidx.activity.compose.setContent
+import com.bwc.tul.audio.AudioPlayer.Companion.TAG
+import com.bwc.tul.ui.dialog.SettingsDialog
+import com.bwc.tul.ui.dialog.UserSettingsDialogFragment
+import com.bwc.tul.ui.TranslationAdapter
+import com.bwc.tul.viewmodel.MainViewModel
+import com.bwc.tul.viewmodel.MainViewModelFactory
 import kotlinx.coroutines.launch
+import java.io.File
 
-class MainActivity : ComponentActivity(),
+class MainActivity : FragmentActivity(),
     UserSettingsDialogFragment.UserSettingsListener,
     SettingsDialog.DevSettingsListener {
 
-    private lateinit var audioHandler: AudioHandler
     private val viewModel: MainViewModel by viewModels {
         MainViewModelFactory(
             application,
-            AudioHandler(applicationContext) { audioData ->
-                viewModel.sendAudio(audioData)
-            },
-            WebSocketClient
+            AudioHandler(
+                context = applicationContext,
+                onAudioChunk = { viewModel.sendAudio(it) }
+            )
         )
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        audioHandler = AudioHandler(applicationContext) { audioData ->
-            viewModel.sendAudio(audioData)
-        }
 
         setContent {
             val uiState by viewModel.uiState.collectAsState()
@@ -57,9 +53,16 @@ class MainActivity : ComponentActivity(),
                     is MainViewModel.ViewEvent.ShareLogFile -> shareLogFile(event.uri)
                     is MainViewModel.ViewEvent.ShowUserSettings -> showUserSettings()
                     is MainViewModel.ViewEvent.ShowDevSettings -> showDevSettings()
-                }
+                    is MainViewModel.ViewEvent.ExportLogsCompleted -> {
+                        // Handle the export logs completed event
+                        showToast("Web Socket Logs Exported") }
+                    }
             }
         }
+    }
+
+    override fun onRequestPermission() {
+        viewModel.handleEvent(MainViewModel.UserEvent.RequestPermission)
     }
 
     private fun showToast(message: String) {
@@ -80,13 +83,12 @@ class MainActivity : ComponentActivity(),
     }
 
     private fun showUserSettings() {
-        supportFragmentManager.commit {
-            setReorderingAllowed(true)
-            add(UserSettingsDialogFragment(), "UserSettingsDialog")
-        }
+        val dialog = UserSettingsDialogFragment()
+        dialog.show(supportFragmentManager, "UserSettingsDialog")
     }
 
     private fun showDevSettings() {
+
         val models = listOf(
             "gemini-2.5-flash-preview-native-audio-dialog",
             "gemini-2.0-flash-live-001",
@@ -94,10 +96,6 @@ class MainActivity : ComponentActivity(),
         )
         val prefs = getSharedPreferences("BwctransPrefs", Context.MODE_PRIVATE)
         SettingsDialog(this, this, prefs, models).show()
-    }
-
-    override fun onRequestPermission() {
-        viewModel.handleEvent(MainViewModel.UserEvent.RequestPermission)
     }
 
     override fun onForceConnect() {
@@ -115,9 +113,37 @@ class MainActivity : ComponentActivity(),
     override fun onClearLog() {
         viewModel.handleEvent(MainViewModel.UserEvent.ClearLogRequested)
     }
+
+    override fun onExportLogsComplete(file: File) {
+        // Handle the exported log file (e.g., share it).
+        viewModel.handleEvent(MainViewModel.UserEvent.ExportLogsCompleted)
+
+        val uri: android.net.Uri? = try {
+            androidx.core.content.FileProvider.getUriForFile(
+                this,
+                "${packageName}.provider", // Make sure this matches your FileProvider authority
+                file
+            )
+        } catch (e: Exception) {
+            showError("Error creating log file URI for sharing: ${e.message}")
+            Log.e(TAG, "Error creating log file UIR", e)
+            null
+        }
+
+        uri?.let {
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_STREAM, it)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivity(Intent.createChooser(shareIntent, "Share WebSocket log file"))
+        } ?: run {
+            showToast("Couldn't create log file for sharing.")
+        }
+    }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\audio\AudioHandler.kt --- 
-package com.bwc.translator2.audio
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\audio\AudioHandler.kt --- 
+package com.bwc.tul.audio
 
 import android.Manifest
 import android.content.Context
@@ -230,8 +256,8 @@ class AudioHandler(
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\audio\AudioPlayer.kt --- 
-package com.bwc.translator2.audio
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\audio\AudioPlayer.kt --- 
+package com.bwc.tul.audio
 
 import android.media.AudioAttributes
 import android.media.AudioFormat
@@ -254,7 +280,7 @@ class AudioPlayer {
     @Volatile private var isReleased = false
 
     companion object {
-        private const val TAG = "AudioPlayer"
+        const val TAG = "AudioPlayer"
         private const val SAMPLE_RATE = 24000
     }
 
@@ -342,8 +368,8 @@ class AudioPlayer {
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\data\ApiModels.kt --- 
-package com.bwc.translator2.data
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\ApiModels.kt --- 
+package com.bwc.tul.data
 
 // Data class for API Versions (e.g., "v1alpha (Preview)" and "v1alpha")
 data class ApiVersion(
@@ -367,13 +393,187 @@ data class ApiKeyInfo(
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\data\ServerModels.kt --- 
-// app/src/main/java/com.bwc.translator2.data/ServerModels.kt
-package com.bwc.translator2.data
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\AppDatabase.kt --- 
+package com.bwc.tul.data
+
+import android.content.Context
+import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+import com.bwc.tul.data.websocket.WebSocketLogEntry
+import java.util.Date
+@TypeConverters(AppDatabase.Converters::class) // Reference nested Converters class
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun sessionDao(): SessionDao
+    abstract fun entryDao(): EntryDao
+    abstract fun webSocketLogDao(): WebSocketLogDao
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "translator_database"
+                )
+                    .addMigrations(MIGRATION_2_3)
+                    .build()
+                INSTANCE = instance
+                instance
+            }
+        }
+
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `websocket_logs` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        `direction` TEXT NOT NULL,
+                        `url` TEXT NOT NULL,
+                        `message` TEXT NOT NULL,
+                        `is_error` INTEGER NOT NULL DEFAULT 0,
+                        `error_message` TEXT
+                    )
+                """)
+            }
+        }
+    }
+
+    class Converters {
+        @TypeConverter
+        fun fromTimestamp(value: Long?): Date? = value?.let { Date(it) }
+
+        @TypeConverter
+        fun dateToTimestamp(date: Date?): Long? = date?.time
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\Daos.kt --- 
+package com.bwc.tul.data
+
+
+import androidx.room.*
+import com.bwc.tul.data.ConversationSession
+import com.bwc.tul.data.SessionWithPreview
+import com.bwc.tul.data.TranslationEntry
+import com.bwc.tul.data.websocket.WebSocketLogEntry
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface SessionDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSession(session: ConversationSession): Long
+
+    @Query("SELECT * FROM sessions ORDER BY startTime DESC")
+    fun getAllSessions(): Flow<List<ConversationSession>>
+
+    @Transaction
+    @Query("""
+        SELECT s.id, s.startTime, 
+        (SELECT COALESCE(
+            CASE WHEN e.isFromEnglish THEN e.englishText ELSE e.thaiText END,
+            'No messages'
+        )
+        FROM entries e 
+        WHERE e.sessionId = s.id 
+        ORDER BY e.timestamp ASC 
+        LIMIT 1) as previewText
+        FROM sessions s
+        ORDER BY s.startTime DESC
+    """)
+    fun getSessionsWithPreviews(): Flow<List<SessionWithPreview>>
+}
+
+@Dao
+interface EntryDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEntry(entry: TranslationEntry)
+
+    @Query("SELECT * FROM entries WHERE sessionId = :sessionId ORDER BY timestamp ASC")
+    fun getEntriesForSession(sessionId: Long): Flow<List<TranslationEntry>>
+}
+
+@Dao
+interface WebSocketLogDao {
+    @Insert
+    suspend fun insert(logEntry: WebSocketLogEntry)
+
+    @Query("SELECT * FROM websocket_logs ORDER BY timestamp DESC LIMIT :limit")
+    suspend fun getRecentLogs(limit: Int = 200): List<WebSocketLogEntry>
+
+    @Query("SELECT * FROM websocket_logs ORDER BY timestamp DESC")
+    suspend fun getAllLogs(): List<WebSocketLogEntry>
+
+    @Query("DELETE FROM websocket_logs WHERE timestamp < :cutoffTime")
+    suspend fun deleteOldLogs(cutoffTime: Long)
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\DatabaseModels.kt --- 
+package com.bwc.tul.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.ForeignKey
+import androidx.room.Index
+import java.util.Date
+
+// Room Database Entities
+@Entity(
+    tableName = "sessions",
+    indices = [Index(value = ["startTime"])]
+)
+data class ConversationSession(
+    @PrimaryKey val id: Long = System.currentTimeMillis(),
+    val startTime: Date = Date()
+)
+
+@Entity(
+    tableName = "entries",
+    indices = [
+        Index(value = ["sessionId"]),
+        Index(value = ["timestamp"])
+    ],
+    foreignKeys = [ForeignKey(
+        entity = ConversationSession::class,
+        parentColumns = ["id"],
+        childColumns = ["sessionId"],
+        onDelete = ForeignKey.CASCADE
+    )]
+)
+data class TranslationEntry(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val sessionId: Long,
+    val englishText: String,
+    val thaiText: String,
+    val timestamp: Date = Date(),
+    val isFromEnglish: Boolean
+)
+
+// Non-entity data classes for queries
+data class SessionWithPreview(
+    val id: Long,
+    val startTime: Date,
+    val previewText: String?
+)
+
+data class SessionPreview(
+    val session: ConversationSession,
+    val previewText: String
+) 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\ServerModels.kt --- 
+package com.bwc.tul.data
 
 import com.google.gson.annotations.SerializedName
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import java.util.Date
+import androidx.room.ForeignKey
+import androidx.room.Index
 
-// --- DATA CLASSES ---
+
+// API Response Models
 data class ServerResponse(
     @SerializedName("serverContent") val serverContent: ServerContent?,
     @SerializedName("inputTranscription") val inputTranscription: Transcription?,
@@ -382,6 +582,7 @@ data class ServerResponse(
     @SerializedName("sessionResumptionUpdate") val sessionResumptionUpdate: SessionResumptionUpdate?,
     @SerializedName("goAway") val goAway: GoAway?
 )
+
 data class ServerContent(
     @SerializedName("parts") val parts: List<Part>?,
     @SerializedName("modelTurn") val modelTurn: ModelTurn?,
@@ -389,6 +590,7 @@ data class ServerContent(
     @SerializedName("outputTranscription") val outputTranscription: Transcription?,
     @SerializedName("turnComplete") val turnComplete: Boolean?
 )
+
 data class ModelTurn(@SerializedName("parts") val parts: List<Part>?)
 data class Part(@SerializedName("text") val text: String?, @SerializedName("inlineData") val inlineData: InlineData?)
 data class InlineData(@SerializedName("mime_type") val mimeType: String?, @SerializedName("data") val data: String?)
@@ -396,14 +598,14 @@ data class Transcription(@SerializedName("text") val text: String?)
 data class SetupComplete(val dummy: String? = null)
 data class SessionResumptionUpdate(@SerializedName("newHandle") val newHandle: String?, @SerializedName("resumable") val resumable: Boolean?)
 data class GoAway(@SerializedName("timeLeft") val timeLeft: String?)
+
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\data\TranslationRepository.kt --- 
-package com.bwc.translator2.data // Corrected package
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\TranslationRepository.kt --- 
+package com.bwc.tul.data // Corrected package
 
 import android.content.SharedPreferences
 import android.content.res.Resources
-import com.bwc.translator2.R
-// Removed: import com.data.ApiModels (ApiVersion and ApiKeyInfo are in this package directly)
+import com.bwc.tul.R
 
 class TranslationRepository(
     private val prefs: SharedPreferences,
@@ -427,258 +629,49 @@ class TranslationRepository(
         }
     }
 
-}
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\data\UIState.kt --- 
-package com.bwc.translator2.data
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\UIState.kt --- 
+package com.bwc.tul.data
+
+import com.bwc.tul.ui.view.TranslationItem
 
 data class UIState(
     val statusText: String = "",
     val toolbarInfoText: String = "",
     val isListening: Boolean = false,
-    val translations: List<Pair<String, Boolean>> = emptyList(),
+    val translations: List<TranslationItem> = emptyList(),
     val showDebugOverlay: Boolean = false,
     val debugLog: String = "",
     val isRecording: Boolean = false,
     val isConnected: Boolean = false,
     val isSending: Boolean = false,
+    val isReady: Boolean = false,
     val lastAudioSentTime: Long = 0
-) 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\network\WebSocketClient.kt --- 
-package com.bwc.translator2.network
+)
 
-import android.content.Context
-import android.util.Base64
-import android.util.Log
-import com.google.gson.Gson
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import okhttp3.logging.HttpLoggingInterceptor
-import java.io.File
-import java.io.FileWriter
-import java.io.PrintWriter
-import java.util.concurrent.TimeUnit
+ 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\WebSocketLogEntry.kt --- 
+package com.bwc.tul.data.websocket
 
-class WebSocketClient(
-    private val context: Context,
-    private val config: WebSocketConfig,
-    private val listener: WebSocketListener
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "websocket_logs")
+data class WebSocketLogEntry(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @ColumnInfo(name = "timestamp") val timestamp: Long = System.currentTimeMillis(),
+    @ColumnInfo(name = "direction") val direction: Direction,
+    @ColumnInfo(name = "url") val url: String,
+    @ColumnInfo(name = "message") val message: String,
+    @ColumnInfo(name = "is_error") val isError: Boolean = false,
+    @ColumnInfo(name = "error_message") val errorMessage: String? = null
 ) {
-    private var webSocket: WebSocket? = null
-    private var isSetupComplete = false
-    private var isConnected = false
-    private val scope = CoroutineScope(Dispatchers.IO)
-    private val gson = Gson()
-    private var logFileWriter: PrintWriter? = null
-    private var logFile: File? = null
-
-    private val client = OkHttpClient.Builder()
-        .readTimeout(0, TimeUnit.MILLISECONDS)
-        .pingInterval(30, TimeUnit.SECONDS)
-        .addInterceptor(createLoggingInterceptor())
-        .build()
-
-    fun connect() {
-        if (isConnected) return
-        initializeLogging()
-        initializeWebSocket()
-    }
-
-    private fun initializeLogging() {
-        try {
-            val logDir = File(context.getExternalFilesDir(null), "websocket_logs")
-            logDir.mkdirs()
-            logFile = File(logDir, "session_${System.currentTimeMillis()}.log").apply {
-                logFileWriter = PrintWriter(FileWriter(this, true), true)
-                logFileWriter?.println("--- Session Started ${java.util.Date()} ---")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize logging", e)
-            listener.onFailure(null, e, null)
-        }
-    }
-
-    private fun initializeWebSocket() {
-        val request = Request.Builder()
-            .url(buildWebSocketUrl())
-            .build()
-
-        webSocket = client.newWebSocket(request, object : WebSocketListener() {
-            override fun onOpen(webSocket: WebSocket, response: Response) {
-                handleWebSocketOpen(response)
-            }
-
-            override fun onMessage(webSocket: WebSocket, text: String) {
-                handleTextMessage(text)
-            }
-
-            override fun onMessage(webSocket: WebSocket, bytes: okio.ByteString) {
-                handleBinaryMessage(bytes)
-            }
-
-            override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
-                handleWebSocketClosing(code, reason)
-            }
-
-            override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                handleWebSocketFailure(t, response)
-            }
-        })
-    }
-
-    private fun handleWebSocketOpen(response: Response) {
-        scope.launch {
-            logMessage("CONNECTED", "HTTP ${response.code}")
-            isConnected = true
-            sendConfiguration()
-            listener.onOpen(null, response)
-        }
-    }
-
-    private fun handleTextMessage(text: String) {
-        scope.launch {
-            logMessage("INCOMING TEXT", text.take(300))
-            processMessage(text)
-        }
-    }
-
-    private fun handleBinaryMessage(bytes: okio.ByteString) {
-        scope.launch {
-            logMessage("INCOMING BINARY", "size=${bytes.size}")
-            processMessage(bytes.utf8())
-        }
-    }
-
-    private fun handleWebSocketClosing(code: Int, reason: String) {
-        scope.launch {
-            logMessage("CLOSING", "code=$code reason=$reason")
-            cleanupResources()
-            listener.onClosing(null, code, reason)
-        }
-    }
-
-    private fun handleWebSocketFailure(t: Throwable, response: Response?) {
-        scope.launch {
-            logError("FAILURE", t)
-            cleanupResources()
-            listener.onFailure(null, t, response)
-        }
-    }
-
-    private fun processMessage(message: String) {
-        try {
-            if (message.contains("\"setupComplete\"")) {
-                isSetupComplete = true
-                listener.onSetupComplete()
-            }
-            listener.onMessage(null, message)
-        } catch (e: Exception) {
-            logError("Message processing failed", e)
-        }
-    }
-
-    private fun sendConfiguration() {
-        val configMessage = gson.toJson(config.createSetupMessage())
-        logMessage("CONFIG SENT", configMessage.take(300))
-        webSocket?.send(configMessage)
-    }
-
-    private fun cleanupResources() {
-        webSocket?.close(1000, "Normal closure")
-        webSocket = null
-        logFileWriter?.apply {
-            println("--- Session Ended ${java.util.Date()} ---")
-            flush()
-            close()
-        }
-        isConnected = false
-        isSetupComplete = false
-    }
-
-    private fun createAudioMessage(audioData: ByteArray): String {
-        return gson.toJson(mapOf(
-            "realtimeInput" to mapOf(
-                "audio" to mapOf(
-                    "data" to Base64.encodeToString(audioData, Base64.NO_WRAP),
-                    "mime_type" to "audio/pcm;rate=16000"
-                )
-            )
-        ))
-    }
-
-    private fun buildWebSocketUrl(): String {
-        return "wss://${config.host}/ws/google.ai.generativelanguage.${config.apiVersion}" +
-                ".GenerativeService.BidiGenerateContent?key=${config.apiKey}"
-    }
-
-    private fun createLoggingInterceptor(): HttpLoggingInterceptor {
-        return HttpLoggingInterceptor { message ->
-            Log.d(TAG, message)
-            logFileWriter?.println("NETWORK: $message")
-        }.apply { level = HttpLoggingInterceptor.Level.BODY }
-    }
-
-    private fun logMessage(tag: String, message: String) {
-        Log.d(TAG, "$tag: $message")
-        logFileWriter?.println("$tag: $message")
-    }
-
-    private fun logError(context: String, error: Throwable) {
-        Log.e(TAG, context, error)
-        logFileWriter?.println("ERROR [$context]: ${error.message}")
-        error.printStackTrace(logFileWriter)
-    }
-
-    interface WebSocketListener : okhttp3.WebSocketListener {
-        fun onSetupComplete()
-    }
-
-    data class WebSocketConfig(
-        val host: String,
-        val modelName: String,
-        val vadSilenceMs: Int,
-        val apiVersion: String,
-        val apiKey: String,
-        val sessionHandle: String?,
-        val systemInstruction: String
-    ) {
-        fun createSetupMessage(): Map<String, Any> {
-            return mapOf("setup" to mutableMapOf<String, Any>().apply {
-                put("model", "models/$modelName")
-                put("generationConfig", mapOf("responseModalities" to listOf("AUDIO")))
-                put("systemInstruction", createSystemInstruction())
-                put("inputAudioTranscription", emptyMap<String, Any>())
-                put("outputAudioTranscription", emptyMap<String, Any>())
-                put("contextWindowCompression", mapOf("slidingWindow" to emptyMap<String, Any>()))
-                put("realtimeInputConfig", mapOf(
-                    "automaticActivityDetection" to mapOf("silenceDurationMs" to vadSilenceMs)
-                ))
-                sessionHandle?.let {
-                    put("sessionResumption", mapOf("handle" to it))
-                }
-            })
-        }
-
-        private fun createSystemInstruction(): Map<String, Any> {
-            return mapOf("parts" to systemInstruction.split(Regex("\n\n+")).map {
-                mapOf("text" to it.trim())
-            })
-        }
-    }
-
-    companion object {
-        private const val TAG = "WebSocketClient"
-    }
+    enum class Direction { SENT, RECEIVED }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\output\TextToSpeechManager.kt --- 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\output\TextToSpeechManager.kt --- 
 // Create a new file, e.g., in a new 'output' package: output/TextToSpeechManager.kt
-package com.bwc.translator2.output
+package com.bwc.tul.output
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
@@ -738,15 +731,16 @@ class TextToSpeechManager(context: Context, private val onReady: () -> Unit) : T
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\TranslationAdapter.kt --- 
-package com.bwc.translator2.ui
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\TranslationAdapter.kt --- 
+package com.bwc.tul.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.bwc.translator2.databinding.ItemTranslationBinding
+import com.bwc.tul.ui.view.TranslationItem
+import com.bwc.tul.databinding.ItemTranslationBinding
 
 class TranslationAdapter : ListAdapter<TranslationItem, TranslationAdapter.ViewHolder>(TranslationDiffCallback()) {
 
@@ -795,14 +789,9 @@ class TranslationAdapter : ListAdapter<TranslationItem, TranslationAdapter.ViewH
     }
 }
 
-data class TranslationItem(
-    val id: String = java.util.UUID.randomUUID().toString(),
-    val text: String,
-    val isUser: Boolean
-)
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\components\StatusBar.kt --- 
-package com.bwc.translator2.ui.components
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\components\StatusBar.kt --- 
+package com.bwc.tul.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -813,8 +802,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
 
+/**
+ * A stateless component to display connection status and provide a connect/disconnect action.
+ */
 @Composable
 fun StatusBar(
     statusText: String,
@@ -827,7 +821,7 @@ fun StatusBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
+                .padding(horizontal = 8.dp) // Consistent padding
         ) {
             Text(
                 text = statusText,
@@ -850,9 +844,35 @@ fun StatusBar(
         )
     }
 }
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\components\TranslationList.kt --- 
-package com.bwc.translator2.ui.components
+
+@Preview(showBackground = true, name = "Status Bar - Disconnected")
+@Composable
+fun StatusBarDisconnectedPreview() {
+    ThaiUncensoredLanguageTheme {
+        StatusBar(
+            statusText = "Disconnected. Tap to connect.",
+            toolbarInfoText = "Session: N/A",
+            isSessionActive = false,
+            onConnectDisconnect = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Status Bar - Connected")
+@Composable
+fun StatusBarConnectedPreview() {
+    ThaiUncensoredLanguageTheme {
+        StatusBar(
+            statusText = "Connected. Listening...",
+            toolbarInfoText = "Session: active-session-123",
+            isSessionActive = true,
+            onConnectDisconnect = {}
+        )
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\components\TranslationList.kt --- 
+package com.bwc.tul.ui.components
+
 
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -862,6 +882,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
 
 
 @Composable
@@ -990,296 +1011,481 @@ You will encounter conversations involving sensitive or explicit topics. Adhere 
 *   **NO META-TEXT:** Do not literal meanings, explanations, advice, opinions or any other meta-information-- OUTPUT the TRANSLATION ONLY
 *   **NATURAL SPEECH:** The output must be natural, conversational speech that a native speaker would use in the same context.`"""
 }
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\SettingsDialog.kt --- 
-package com.bwc.translator2.ui.dialog
 
-import android.app.Dialog
-import android.content.Context
+@Preview(showBackground = true)
+@Composable
+fun TranslationListPreview() {
+    ThaiUncensoredLanguageTheme {
+        val sampleTranslations = listOf(
+            "Hello, how can I help you?" to false, // AI
+            "I need to translate a sentence." to true, // User
+            "Of course, what is the sentence?" to false, // AI
+            "The quick brown fox jumps over the lazy dog." to true // User
+        )
+        TranslationList(translations = sampleTranslations)
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\dialog\SettingsDialog.kt --- 
+package com.bwc.tul.ui.dialog
+
 import android.content.SharedPreferences
-import android.os.Bundle
-import android.util.Log
-import android.view.ViewGroup
-import android.widget.RadioButton
-import android.widget.SeekBar
-import android.widget.Toast
-import com.bwc.translator2.R
-import com.bwc.translator2.data.ApiKeyInfo
-import com.bwc.translator2.data.ApiVersion
-import com.bwc.translator2.databinding.DialogSettingsBinding
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import com.bwc.tul.R
+import com.bwc.tul.data.TranslationRepository
+import com.bwc.tul.ui.settings.DevSettingsContent
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
+import java.io.File
 
-class SettingsDialog(
-    context: Context,
-    private val listener: DevSettingsListener,
-    private val prefs: SharedPreferences,
-    private val models: List<String>
-) : Dialog(context) {
+@Composable
+fun SettingsDialog(
+    onDismissRequest: () -> Unit,
+    listener: DevSettingsListener,
+    prefs: SharedPreferences,
+    models: List<String>
+) {
+    val context = LocalContext.current
+    val repository = TranslationRepository(prefs, context.resources)
+    val apiVersions = repository.getApiVersions()
 
-    interface DevSettingsListener {
-        fun onForceConnect()
-        fun onSettingsSaved()
-        fun onShareLog()
-        fun onClearLog()
+    // State variables
+    var apiHost by rememberSaveable {
+        mutableStateOf(prefs.getString("api_host", "generativelanguage.googleapis.com") ?: "")
+    }
+    var selectedApiVersion by rememberSaveable {
+        mutableStateOf(prefs.getString("api_version", apiVersions.firstOrNull()?.value ?: "v1alpha") ?: "v1alpha")
+    }
+    var vadSensitivity by rememberSaveable {
+        mutableStateOf(prefs.getInt("vad_sensitivity_ms", 800).toString())
+    }
+    var selectedModel by rememberSaveable {
+        mutableStateOf(prefs.getString("selected_model", models.firstOrNull() ?: "").orEmpty())
     }
 
-    companion object {
-        private const val TAG = "SettingsDialog"
-        private const val DEFAULT_API_HOST = "generativelanguage.googleapis.com"
-    }
-
-    private lateinit var binding: DialogSettingsBinding
-    private var apiVersionsList: List<ApiVersion> = emptyList()
-    private var apiKeysList: List<ApiKeyInfo> = emptyList()
-    private var selectedApiVersion: ApiVersion? = null
-    private var selectedApiKeyInfo: ApiKeyInfo? = null
-    private var selectedModel: String = models.firstOrNull() ?: ""
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = DialogSettingsBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        setCancelable(true)
-        window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-
-        loadAndSetCurrentValues()
-        setupViews()
-    }
-
-    private fun loadAndSetCurrentValues() {
-        // Load API Versions with improved error handling
-        apiVersionsList = try {
-            context.resources.getStringArray(R.array.api_versions).mapNotNull {
-                val parts = it.split("|", limit = 2)
-                when {
-                    parts.size == 2 -> ApiVersion(parts[0].trim(), parts[1].trim())
-                    it.isNotBlank() -> ApiVersion(it.trim(), it.trim()).also {
-                        Log.w(TAG, "API version item missing '|' delimiter: '$it'")
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        title = {
+            Text(text = "Developer Settings", style = MaterialTheme.typography.headlineSmall)
+        },
+        text = {
+            ThaiUncensoredLanguageTheme {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                ) {
+                    DevSettingsContent(
+                        apiHost = apiHost,
+                        onApiHostChange = { apiHost = it },
+                        availableApiVersions = apiVersions,
+                        selectedApiVersion = selectedApiVersion,
+                        onApiVersionChange = { selectedApiVersion = it },
+                        vadSensitivity = vadSensitivity,
+                        onVadSensitivityChange = { vadSensitivity = it },
+                        availableModels = models,
+                        selectedModel = selectedModel,
+                        onModelSelected = { selectedModel = it },
+                        onShareLog = { listener.onShareLog() },
+                        onClearLog = { listener.onClearLog() },
+                        onExportLogsComplete = { file -> listener.onExportLogsComplete(file) }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = {
+                        with(prefs.edit()) {
+                            putString("api_host", apiHost)
+                            putString("api_version", selectedApiVersion)
+                            putString("selected_model", selectedModel)
+                            putInt("vad_sensitivity_ms", vadSensitivity.toIntOrNull() ?: 800)
+                            apply()
+                        }
+                        listener.onSettingsSaved()
+                        onDismissRequest()
                     }
-                    else -> null
+                ) {
+                    Text("Save")
                 }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading API versions", e)
-            emptyList()
         }
-
-        // Load API Keys with improved error handling
-        apiKeysList = try {
-            context.resources.getStringArray(R.array.api_keys).mapNotNull {
-                val parts = it.split(":", limit = 2)
-                if (parts.size == 2) {
-                    ApiKeyInfo(parts[0].trim(), parts[1].trim())
-                } else {
-                    Log.e(TAG, "Malformed API key item: '$it'. Expected 'DisplayName:Value' format.")
-                    null
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error loading API keys", e)
-            emptyList()
-        }
-
-        selectedApiVersion = apiVersionsList.firstOrNull { it.value == prefs.getString("api_version", null) }
-        selectedApiKeyInfo = apiKeysList.firstOrNull { it.value == prefs.getString("api_key", null) }
-        selectedModel = prefs.getString("selected_model", models.firstOrNull()) ?: models.firstOrNull() ?: ""
-    }
-
-    private fun setupViews() {
-        // Connection Settings
-        binding.hostManualEditText.setText(prefs.getString("api_host", DEFAULT_API_HOST) ?: DEFAULT_API_HOST)
-
-        // API Version Selection
-        apiVersionsList.forEach { apiVersion ->
-            binding.apiVersionRadioGroup.addView(RadioButton(context).apply {
-                text = apiVersion.displayName
-                tag = apiVersion
-                isChecked = apiVersion == selectedApiVersion
-            })
-        }
-        binding.apiVersionRadioGroup.setOnCheckedChangeListener { group, checkedId ->
-            selectedApiVersion = group.findViewById<RadioButton>(checkedId).tag as? ApiVersion
-        }
-
-        // API Key Selection
-        binding.apiKeyManualEditText.setText(prefs.getString("api_key", "") ?: "")
-        apiKeysList.forEach { apiKey ->
-            binding.apiKeyRadioGroup.addView(RadioButton(context).apply {
-                text = apiKey.displayName
-                tag = apiKey
-                isChecked = apiKey.value == prefs.getString("api_key", null)
-            })
-        }
-        binding.apiKeyRadioGroup.setOnCheckedChangeListener { group, checkedId ->
-            (group.findViewById<RadioButton>(checkedId).tag as? ApiKeyInfo)?.let {
-                binding.apiKeyManualEditText.setText(it.value)
-            }
-        }
-
-        // Model Selection
-        binding.modelManualEditText.setText(selectedModel)
-        models.forEach { model ->
-            binding.modelRadioGroup.addView(RadioButton(context).apply {
-                text = model
-                tag = model
-                isChecked = model == selectedModel
-            })
-        }
-        binding.modelRadioGroup.setOnCheckedChangeListener { group, checkedId ->
-            (group.findViewById<RadioButton>(checkedId).tag as? String)?.let {
-                binding.modelManualEditText.setText(it)
-            }
-        }
-
-        // VAD Sensitivity
-        val currentVad = prefs.getInt("vad_sensitivity_ms", 800)
-        binding.vadSensitivity.progress = currentVad
-        binding.vadValue.text = "$currentVad ms"
-        binding.vadSensitivity.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                binding.vadValue.text = "$progress ms"
-            }
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
-        })
-
-        // Debug Options
-        binding.debugOverlaySwitch.isChecked = prefs.getBoolean("show_debug_overlay", false)
-
-        // Log Actions
-        binding.shareLogBtn.setOnClickListener {
-            listener.onShareLog()
-        }
-        binding.clearLogBtn.setOnClickListener {
-            listener.onClearLog()
-            Toast.makeText(context, "On-screen log cleared", Toast.LENGTH_SHORT).show()
-        }
-
-        // Save Actions
-        binding.saveSettingsBtn.setOnClickListener {
-            saveSettings()
-            dismiss()
-        }
-        binding.forceConnectBtn.setOnClickListener {
-            saveSettings()
-            listener.onForceConnect()
-            dismiss()
-        }
-    }
-
-    private fun saveSettings() {
-        prefs.edit().apply {
-            putString("api_host", binding.hostManualEditText.text.toString().trim())
-            putString("api_key", binding.apiKeyManualEditText.text.toString().trim())
-            putString("selected_model", binding.modelManualEditText.text.toString().trim())
-            selectedApiVersion?.let { putString("api_version", it.value) }
-            putInt("vad_sensitivity_ms", binding.vadSensitivity.progress)
-            putBoolean("show_debug_overlay", binding.debugOverlaySwitch.isChecked)
-            apply()
-        }
-        Log.d(TAG, "Settings saved")
-        listener.onSettingsSaved()
-    }
+    )
 }
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\dialog\UserSettingsDialogFragment.kt --- 
-package com.bwc.translator2.ui.dialog
-import android.Manifest
-import android.app.Dialog
+
+interface DevSettingsListener {
+    fun onForceConnect()
+    fun onShareLog()
+    fun onClearLog()
+    fun onSettingsSaved()
+    fun onExportLogsComplete(file: File)
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\dialog\UserSettingsDialogFragment.kt --- 
+package com.bwc.tul.ui.dialog
+
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
-import android.widget.Toast
-import androidx.core.content.ContextCompat
-import com.bwc.translator2.databinding.DialogUserSettingsBinding
-import com.google.android.material.R
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.fragment.app.DialogFragment
+import com.bwc.tul.ui.settings.UserSettingsContent
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
 
-class UserSettingsDialogFragment : BottomSheetDialogFragment() {
+class UserSettingsDialogFragment : DialogFragment() {
 
     interface UserSettingsListener {
+        fun onSettingsSaved()
         fun onRequestPermission()
     }
 
-    private var _binding: DialogUserSettingsBinding? = null
-    private val binding get() = _binding!!
     private var listener: UserSettingsListener? = null
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        if (context is UserSettingsListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement UserSettingsListener")
-        }
+        listener = context as? UserSettingsListener
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        _binding = DialogUserSettingsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+        // MODIFICATION: Replaced XML inflation with ComposeView
+        return ComposeView(requireContext()).apply {
+            setContent {
+                // State is managed and "hoisted" here in the DialogFragment
+                val prefs = requireActivity().getSharedPreferences(
+                    "BwctransPrefs", Context.MODE_PRIVATE)
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = super.onCreateDialog(savedInstanceState)
-        dialog.setOnShowListener {
-            val bottomSheet = dialog.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            if (bottomSheet != null) {
-                val behavior = BottomSheetBehavior.from(bottomSheet)
-                behavior.state = BottomSheetBehavior.STATE_EXPANDED
-                behavior.skipCollapsed = true
+                var apiKey by remember {
+                    mutableStateOf(prefs.getString("api_key", "") ?: "")
+                }
+                var sourceLang by remember {
+                    mutableStateOf(prefs.getString("source_lang", "en-US") ?: "en-US")
+                }
+                var targetLang by remember {
+                    mutableStateOf(prefs.getString("target_lang", "es-ES") ?: "es-ES")
+                }
+
+                ThaiUncensoredLanguageTheme {
+                    UserSettingsContent(
+                        apiKey = apiKey,
+                        onApiKeyChange = { apiKey = it },
+                        sourceLang = sourceLang,
+                        onSourceLangChange = { sourceLang = it },
+                        targetLang = targetLang,
+                        onTargetLangChange = { targetLang = it },
+                        onSave = {
+                            with(prefs.edit()) {
+                                putString("api_key", apiKey)
+                                putString("source_lang", sourceLang)
+                                putString("target_lang", targetLang)
+                                apply()
+                            }
+                            listener?.onSettingsSaved()
+                            dismiss()
+                        },
+                        onDismiss = {
+                            dismiss()
+                        }
+                    )
+                }
             }
         }
-        return dialog
     }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\settings\DevSettingsScreen.kt --- 
+package com.bwc.tul.ui.settings
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.bwc.tul.data.ApiVersion
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
+import kotlin.math.roundToInt
+import com.bwc.tul.ui.components.WebSocketLogExporter
 
-        binding.closeBtn.setOnClickListener {
-            dismiss()
-        }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DevSettingsContent(
+    apiHost: String,
+    onApiHostChange: (String) -> Unit,
+    availableApiVersions: List<ApiVersion>,
+    selectedApiVersion: String,
+    onApiVersionChange: (String) -> Unit,
+    vadSensitivity: String,
+    onVadSensitivityChange: (String) -> Unit,
+    availableModels: List<String>,
+    selectedModel: String,
+    onModelSelected: (String) -> Unit,
+    onSave: () -> Unit,
+    onShareLog: () -> Unit,
+    onClearLog: () -> Unit,
+    onExportLogsComplete: (java.io.File) -> Unit = {}
+) {
+    var modelDropdownExpanded by remember { mutableStateOf(false) }
 
-        binding.autoPlaybackSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val message = "Auto-playback " + if (isChecked) "ON" else "OFF"
-            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        }
+    // Map API versions to slider positions (0-3)
+    val apiVersionPositions = availableApiVersions.mapIndexed { index, _ -> index }
+    val currentApiVersionIndex = availableApiVersions.indexOfFirst { it.value == selectedApiVersion }
+        .coerceIn(0, availableApiVersions.size - 1)
 
-        binding.sendFeedbackBtn.setOnClickListener {
-            Toast.makeText(requireContext(), "Feedback action triggered", Toast.LENGTH_SHORT).show()
-            dismiss()
-        }
+    Surface(modifier = Modifier.padding(16.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Dev Settings", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(16.dp))
 
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            binding.requestPermissionBtn.visibility = View.VISIBLE
-            binding.requestPermissionBtn.setOnClickListener {
-                listener?.onRequestPermission()
-                dismiss()
+            // Model Dropdown
+            ExposedDropdownMenuBox(
+                expanded = modelDropdownExpanded,
+                onExpandedChange = { modelDropdownExpanded = !modelDropdownExpanded }
+            ) {
+                OutlinedTextField(
+                    readOnly = true,
+                    value = selectedModel,
+                    onValueChange = {},
+                    label = { Text("Selected Model") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(modelDropdownExpanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = modelDropdownExpanded,
+                    onDismissRequest = { modelDropdownExpanded = false }
+                ) {
+                    availableModels.forEach { model ->
+                        DropdownMenuItem(
+                            text = { Text(model) },
+                            onClick = {
+                                onModelSelected(model)
+                                modelDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
             }
-        } else {
-            binding.requestPermissionBtn.visibility = View.GONE
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedTextField(
+                value = apiHost,
+                onValueChange = onApiHostChange,
+                label = { Text("API Host") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // VAD Sensitivity Slider
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "VAD Sensitivity: ${vadSensitivity}ms",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = vadSensitivity.toFloatOrNull() ?: 800f,
+                    onValueChange = {
+                        onVadSensitivityChange(it.roundToInt().toString())
+                    },
+                    valueRange = 100f..2000f,
+                    steps = 37
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // API Version Slider
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "API Version: ${availableApiVersions[currentApiVersionIndex].displayName}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Slider(
+                    value = currentApiVersionIndex.toFloat(),
+                    onValueChange = { newValue ->
+                        val index = newValue.roundToInt().coerceIn(0, availableApiVersions.size - 1)
+                        onApiVersionChange(availableApiVersions[index].value)
+                    },
+                    valueRange = 0f..(availableApiVersions.size - 1).toFloat(),
+                    steps = availableApiVersions.size - 2
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    availableApiVersions.forEach { version ->
+                        Text(
+                            text = version.displayName.take(6), // Show abbreviated names
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Row {
+                Button(onClick = onShareLog) { Text("Share Log") }
+                Spacer(Modifier.weight(1f))
+                Button(onClick = onClearLog) { Text("Clear Log") }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+                Text("Save Settings")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            WebSocketLogExporter(onExportComplete =  onExportLogsComplete )
         }
-    }
-
-    override fun onDetach() {
-        super.onDetach()
-        listener = null
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        _binding = null
     }
 }
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\theme\Color.kt --- 
-package com.bwc.translator2.ui.theme
+
+@Preview(showBackground = true)
+@Composable
+fun DevSettingsContentPreview() {
+    val sampleApiVersions = listOf(
+        ApiVersion("v1alpha (Stable)", "v1alpha"),
+        ApiVersion("v1beta (Preview)", "v1beta"),
+        ApiVersion("v1beta1 (Experimental)", "v1beta1"),
+        ApiVersion("v1 (Latest)", "v1")
+    )
+    ThaiUncensoredLanguageTheme {
+        DevSettingsContent(
+            apiHost = "generativelanguage.googleapis.com",
+            onApiHostChange = {},
+            availableApiVersions = sampleApiVersions,
+            selectedApiVersion = "v1beta",
+            onApiVersionChange = {},
+            vadSensitivity = "1250",
+            onVadSensitivityChange = {},
+            availableModels = listOf("model-A", "model-B"),
+            selectedModel = "model-A",
+            onModelSelected = {},
+            onSave = {},
+            onShareLog = {},
+            onClearLog = {},
+            onExportLogsComplete = {}
+        )
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\settings\UserSettingsScreen.kt --- 
+package com.bwc.tul.ui.settings
+
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
+
+/**
+ * A stateless composable for displaying user settings.
+ * State is hoisted to the caller.
+ */
+@Composable
+fun UserSettingsContent(
+    apiKey: String,
+    onApiKeyChange: (String) -> Unit,
+    sourceLang: String,
+    onSourceLangChange: (String) -> Unit,
+    targetLang: String,
+    onTargetLangChange: (String) -> Unit,
+    onSave: () -> Unit,
+
+) {
+    Surface(modifier = Modifier.padding(16.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("User Settings", style = MaterialTheme.typography.headlineSmall)
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = apiKey,
+                onValueChange = onApiKeyChange,
+                label = { Text("API Key") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = sourceLang,
+                onValueChange = onSourceLangChange,
+                label = { Text("Source Language (e.g., en-US)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = targetLang,
+                onValueChange = onTargetLangChange,
+                label = { Text("Target Language (e.g., es-ES)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
+                Text("Save and Dismiss")
+            }
+        }
+    }
+}
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun UserSettingsContentPreview() {
+    ThaiUncensoredLanguageTheme {
+        UserSettingsContent(
+            apiKey = "AIzaSy...AbC123",
+            onApiKeyChange = {},
+            sourceLang = "en-US",
+            onSourceLangChange = {},
+            targetLang = "th-TH",
+            onTargetLangChange = {},
+            onSave = {},
+            onDismiss = {}
+        )
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\theme\Color.kt --- 
+package com.bwc.tul.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -1290,10 +1496,9 @@ val Pink80 = Color(0xFFEFB8C8)
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260) 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\theme\Theme.kt --- 
-package com.bwc.translator2.ui.theme
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\theme\Theme.kt --- 
+package com.bwc.tul.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -1349,8 +1554,8 @@ fun ThaiUncensoredLanguageTheme(
         content = content
     )
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\theme\Type.kt --- 
-package com.bwc.translator2.ui.theme
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\theme\Type.kt --- 
+package com.bwc.tul.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -1384,54 +1589,99 @@ val Typography = Typography(
     )
     */
 ) 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\view\MainScreen.kt --- 
-package com.bwc.translator2.ui.view
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\view\DebugLogScreen.kt --- 
+package com.bwc.tul.ui.screens
 
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import com.bwc.translator2.viewmodel.MainViewModel
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.Text
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ThumbUp // Added import
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material.icons.filled.Phone // Added import
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.Alignment
+import java.io.File
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.painterResource
-import com.bwc.translator2.R
-import com.bwc.translator2.data.UiState
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.ExperimentalMaterial3Api
-import com.bwc.translator2.ui.view.TranslationItemComposable // Ensured import is present
-import com.bwc.translator2.ui.view.TranslationItem // Ensured import is present
-
+import com.bwc.tul.websocket.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
-    val uiState by viewModel.uiState.collectAsState(initial = UiState())
+fun DebugLogScreen(
+    logs: List<String>,
+    onNavigateBack: () -> Unit,
+    onExportLogs: (File) -> Unit = {}
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Debug Logs") },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(logs.size) { index ->
+                Card {
+                    Text(
+                        text = logs[index],
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp)
+                    )
+                }
+            }
+        }
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\view\MainScreen.kt --- 
+package com.bwc.tul.ui.view
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.bwc.tul.data.UIState
+import com.bwc.tul.ui.components.StatusBar
+import com.bwc.tul.ui.dialog.StatefulSettingsDialog
+import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
+import com.bwc.tul.R
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenContent(
+    uiState: UIState,
+    onMicClick: () -> Unit,
+    onConnectDisconnect: () -> Unit,
+    onSettingsClick: () -> Unit,
+    onDevSettingsClick: () -> Unit
+) {
     val listState = rememberLazyListState()
 
     Scaffold(
@@ -1439,67 +1689,91 @@ fun MainScreen(viewModel: MainViewModel) {
             TopAppBar(
                 title = {
                     Column {
-                        Text(text = stringResource(id = R.string.app_name), style = MaterialTheme.typography.titleLarge)
-                        Text(text = uiState.toolbarInfoText, style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            text = stringResource(id = R.string.app_name),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        Text(
+                            text = uiState.toolbarInfoText,
+                            style = MaterialTheme.typography.labelSmall
+                        )
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back navigation */ }) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { /* handle back */ }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_69_white),
+                            contentDescription = "Back"
+                        )
                     }
                 },
                 actions = {
-                    IconButton(onClick = { viewModel.handleEvent(MainViewModel.UserEvent.UserSettingsClicked) }) {
-                        Icon(painter = painterResource(id = R.drawable.ic_settings), contentDescription = "Settings")
-                    }
-                    IconButton(onClick = { /* Handle history click */ }) {
-                        Icon(Icons.Filled.ThumbUp, contentDescription = "History")
+                    // Fixed icon spacing with proper padding
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        IconButton(
+                            onClick = onSettingsClick
+                        ){
+                          Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        IconButton(
+                            onClick = onDevSettingsClick
+                        ){
+
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_history),
+                                contentDescription = "History",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
             )
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.handleEvent(MainViewModel.UserEvent.MicClicked) },
+                onClick = onMicClick,
                 modifier = Modifier.padding(16.dp),
-                containerColor = if (uiState.isListening) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                containerColor = if (uiState.isListening) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary
             ) {
-                  Icon(Icons.Filled.ThumbUp, contentDescription = "Mic")
-            //    Icon(painter = painterResource(id = R.drawable.ic_mic), contentDescription = "Mic")
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_stand_bj),
+                    contentDescription = "Mic"
+                )
             }
         },
         bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = uiState.statusText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = when {
-                        uiState.statusText.contains("error", ignoreCase = true) -> Color.Red
-                        uiState.isListening -> Color.Green
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    textAlign = TextAlign.Center
-                )
-            }
+            StatusBar(
+                statusText = uiState.statusText,
+                toolbarInfoText = uiState.toolbarInfoText,
+                isSessionActive = uiState.isReady,
+                onConnectDisconnect = onConnectDisconnect,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     ) { paddingValues ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
             if (uiState.translations.isEmpty()) {
                 Text(
-                    text = uiState.statusText,
+                    text = if (uiState.isReady) "Start speaking..."
+                    else "Tap 'Connect' to begin",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 16.dp),
+                    textAlign = TextAlign.Center
                 )
             } else {
                 LazyColumn(
@@ -1507,8 +1781,8 @@ fun MainScreen(viewModel: MainViewModel) {
                     reverseLayout = true,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(uiState.translations) { (text, isUser) ->
-                        TranslationItemComposable(item = TranslationItem(text = text, isUser = isUser))
+                    items(uiState.translations) { item ->
+                        TranslationItemComposable(item = item)
                     }
                 }
             }
@@ -1525,7 +1799,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 Text(
                     text = uiState.debugLog,
                     color = Color.Green,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    fontFamily = FontFamily.Monospace,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -1538,9 +1812,56 @@ fun MainScreen(viewModel: MainViewModel) {
         }
     }
 }
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\ui\view\TranslationItem.kt --- 
-package com.bwc.translator2.ui.view // Added package declaration
+
+// Preview functions remain unchanged from your original code
+@Preview(showBackground = true, name = "Main Screen - Disconnected Empty")
+@Composable
+fun MainScreenDisconnectedEmptyPreview() {
+    ThaiUncensoredLanguageTheme {
+        MainScreenContent(
+            uiState = UIState(
+                statusText = "Disconnected",
+                toolbarInfoText = "Offline",
+                isReady = false,
+                isListening = false,
+                translations = emptyList(),
+                showDebugOverlay = false,
+                debugLog = ""
+            ),
+            onMicClick = {},
+            onConnectDisconnect = {},
+            onSettingsClick = {},
+            onDevSettingsClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 120, heightDp = 240, name = "Main Screen - Connected Listening")
+@Composable
+fun MainScreenConnectedListeningPreview() {
+    ThaiUncensoredLanguageTheme {
+        MainScreenContent(
+            uiState = UIState(
+                statusText = "Connected. Listening...",
+                toolbarInfoText = "Session active, 1 participant",
+                isReady = true,
+                isListening = true,
+                translations = listOf(
+                    TranslationItem(text = "Hello, how are you?", isUser = true),
+                    TranslationItem(text = "I'm doing well, thank you!", isUser = false)
+                ),
+                showDebugOverlay = true,
+                debugLog = "Audio processing: ON | Connection: Stable"
+            ),
+            onMicClick = {},
+            onConnectDisconnect = {},
+            onSettingsClick = {},
+            onDevSettingsClick = {}
+        )
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\view\TranslationItem.kt --- 
+package com.bwc.tul.ui.view // Added package declaration
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -1606,16 +1927,85 @@ fun PreviewTranslationItemModel() {
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\viewmodel\MainViewModel.kt --- 
-package com.bwc.translator2.viewmodel
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\util\DebugLogger.kt --- 
+package com.bwc.tul.util
+
+import android.content.Context
+import android.net.Uri
+import android.util.Log
+import androidx.core.content.FileProvider
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+
+object DebugLogger {
+    private const val TAG = "DebugLogger"
+    private val logBuilder = StringBuilder()
+    private var logFile: File? = null
+
+    @Synchronized
+    fun log(message: String) {
+        val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
+        val logEntry = "[$timestamp] $message\n"
+        print(logEntry) // Also print to logcat for real-time debugging
+        logBuilder.append(logEntry)
+        // Optionally write to file immediately if performance is not an issue
+        // appendToFile(logEntry)
+    }
+
+    @Synchronized
+    fun getLog(): String {
+        return logBuilder.toString()
+    }
+
+    @Synchronized
+    fun clear() {
+        logBuilder.clear()
+        // Optionally delete the log file
+        logFile?.delete()
+        logFile = null
+        log("--- Log Cleared ---")
+    }
+
+    @Synchronized
+    fun getLogFileUri(context: Context): Uri? {
+        return try {
+            val logDir = File(context.getExternalFilesDir(null), "logs")
+            logDir.mkdirs()
+            logFile = File(logDir, "debug_log_${System.currentTimeMillis()}.txt")
+            logFile?.writeText(getLog())
+
+            FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.provider", // Make sure this matches your FileProvider authority
+                logFile!!
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating log file URI", e)
+            null
+        }
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\viewmodel\MainViewModel.kt --- 
+package com.bwc.tul.viewmodel
 
 import android.app.Application
-import android.util.Base64
+import android.content.Context
+import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.bwc.translator2.audio.AudioHandler
-import com.bwc.translator2.data.UIState
-import com.bwc.translator2.network.WebSocketClient
+import com.bwc.tul.audio.AudioHandler
+import com.bwc.tul.audio.AudioPlayer
+import com.bwc.tul.data.ServerResponse
+import com.bwc.tul.data.UIState
+import com.bwc.tul.websocket.WebSocketClient
+import com.bwc.tul.websocket.WebSocketConfig
+import com.bwc.tul.ui.view.TranslationItem
+import com.bwc.tul.ui.components.Constant
+import com.bwc.tul.util.DebugLogger
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -1623,18 +2013,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
-import okhttp3.WebSocket
-import okhttp3.WebSocketListener
-import java.util.concurrent.TimeUnit
+import java.io.File
 
 class MainViewModel(
     application: Application,
-    private val audioHandler: AudioHandler,
-    private val webSocketFactory: WebSocketClient.Companion
-) : AndroidViewModel(application) {
+    private val audioHandler: AudioHandler
+) : AndroidViewModel(application), WebSocketClient.WebSocketListener {
 
     private val _uiState = MutableStateFlow(UIState())
     val uiState = _uiState.asStateFlow()
@@ -1642,200 +2026,603 @@ class MainViewModel(
     private val _events = MutableSharedFlow<ViewEvent>()
     val events = _events.asSharedFlow()
 
-    private var webSocket: WebSocket? = null
-    private var currentSessionId: String = generateSessionId()
+    private var webSocketClient: WebSocketClient? = null
+    private val gson = Gson()
+    private val logger = DebugLogger
+    private var audioPlayer: AudioPlayer? = null
+    private var sessionHandle: String? = null
 
-    fun sendAudio(audioData: ByteArray) {
-        viewModelScope.launch {
-            try {
-                val base64Audio = Base64.encodeToString(audioData, Base64.NO_WRAP)
-                val messagePayload = mapOf(
-                    "audio_data" to base64Audio,
-                    "timestamp" to System.currentTimeMillis(),
-                    "session_id" to currentSessionId
-                )
-                val jsonMessage = Gson().toJson(messagePayload)
-                webSocket?.send(jsonMessage)
-
-                _uiState.update { currentState ->
-                    currentState.copy(
-                        isSending = true,
-                        lastAudioSentTime = System.currentTimeMillis()
-                    )
-                }
-            } catch (e: Exception) {
-                _events.emit(ViewEvent.ShowError("Failed to send audio: ${e.message}"))
-                _uiState.update { it.copy(isSending = false) }
-            }
-        }
-    }
-
-    fun connectWebSocket() {
-        viewModelScope.launch {
-            try {
-                val client = OkHttpClient.Builder()
-                    .readTimeout(0, TimeUnit.MILLISECONDS)
-                    .build()
-
-                val request = Request.Builder()
-                    .url("wss://your-websocket-endpoint.com")
-                    .build()
-
-                webSocket = client.newWebSocket(request, object : WebSocketListener() {
-                    override fun onOpen(webSocket: WebSocket, response: Response) {
-                        _uiState.update { it.copy(isConnected = true) }
-                    }
-
-                    override fun onMessage(webSocket: WebSocket, text: String) {
-                        handleWebSocketMessage(text)
-                    }
-
-                    override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                        _uiState.update { it.copy(isConnected = false) }
-                    }
-
-                    override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                        _events.emit(ViewEvent.ShowError("WebSocket error: ${t.message}"))
-                        _uiState.update { it.copy(isConnected = false) }
-                    }
-                })
-            } catch (e: Exception) {
-                _events.emit(ViewEvent.ShowError("Connection failed: ${e.message}"))
-            }
-        }
-    }
+    private val prefs = application.getSharedPreferences(
+        "BwctransPrefs", Context.MODE_PRIVATE)
 
     fun handleEvent(event: UserEvent) {
-        when (event) {
-            UserEvent.MicClicked -> toggleRecording()
-            UserEvent.ConnectClicked -> connectWebSocket()
-            UserEvent.SettingsSaved -> reloadConfiguration()
-            UserEvent.RequestPermission -> checkAudioPermission()
-            UserEvent.ShareLogRequested -> handleShareLog()
-            UserEvent.ClearLogRequested -> clearDebugLog()
-            UserEvent.UserSettingsClicked -> showUserSettings()
-            UserEvent.DevSettingsClicked -> showDevSettings()
+        viewModelScope.launch {
+            when (event) {
+                UserEvent.MicClicked -> toggleRecording()
+                UserEvent.ConnectClicked -> connectWebSocket()
+                UserEvent.DisconnectClicked -> disconnectWebSocket()
+                UserEvent.SettingsSaved -> {
+                    reloadConfiguration()
+                    _events.emit(ViewEvent.ShowToast(
+                        "Settings Saved. Please reconnect."))
+                }
+                UserEvent.RequestPermission ->
+                    _events.emit(ViewEvent.ShowUserSettings)
+                UserEvent.ShareLogRequested -> handleShareLog()
+                UserEvent.ClearLogRequested -> clearDebugLog()
+                UserEvent.UserSettingsClicked ->
+                    _events.emit(ViewEvent.ShowUserSettings)
+                UserEvent.DevSettingsClicked ->
+                    _events.emit(ViewEvent.ShowDevSettings)
+                UserEvent.ExportLogsCompleted ->  _events.emit(ViewEvent.ShowToast("Web Socket Logs Exported"))
+
+            }
+        }
+    }
+
+    private fun connectWebSocket() {
+        if (_uiState.value.isConnected) {
+            logStatus("Already connecting or connected.")
+            return
+        }
+        logStatus("Connecting...")
+        audioPlayer?.release()
+        audioPlayer = AudioPlayer()
+        val config = buildWebSocketConfig()
+        webSocketClient = WebSocketClient(config, this, getApplication())
+        webSocketClient?.connect()
+    }
+
+    private fun disconnectWebSocket() {
+        logStatus("Disconnecting...")
+        webSocketClient?.disconnect()
+        webSocketClient = null
+        audioHandler.stopRecording()
+        _uiState.update {
+            it.copy(
+                isRecording = false,
+                isListening = false,
+                isConnected = false,
+                isReady = false,
+                statusText = "Disconnected."
+            )
         }
     }
 
     private fun toggleRecording() {
-        if (_uiState.value.isRecording) {
-            audioHandler.stopRecording()
-            _uiState.update { it.copy(isRecording = false) }
+        if (!_uiState.value.isReady) {
+            logError("Not ready for audio. Please wait for setup.")
+            return
+        }
+        val newIsListening = !_uiState.value.isListening
+        _uiState.update { it.copy(isListening = newIsListening) }
+
+        if (newIsListening) {
+            audioHandler.startRecording()
+            logStatus("Listening...")
         } else {
-            if (audioHandler.hasRecordAudioPermission(getApplication())) {
-                audioHandler.startRecording()
-                _uiState.update { it.copy(isRecording = true) }
-            } else {
-                viewModelScope.launch {
-                    _events.emit(ViewEvent.ShowError("Microphone permission required"))
+            audioHandler.stopRecording()
+            logStatus("Recording stopped.")
+        }
+    }
+
+    fun sendAudio(audioData: ByteArray) {
+        webSocketClient?.sendAudio(audioData)
+        _uiState.update {
+            it.copy(
+                isSending = true,
+                lastAudioSentTime = System.currentTimeMillis()
+            )
+        }
+    }
+
+    override fun onConnectionOpen() {
+        logStatus("Connection open, sending setup...")
+        _uiState.update { it.copy(isConnected = true, isReady = false) }
+    }
+
+    override fun onSetupComplete() {
+        logStatus("Setup complete. Ready to talk.")
+        _uiState.update { it.copy(isReady = true) }
+        if (!_uiState.value.isListening) {
+            toggleRecording()
+        }
+    }
+
+    override fun onMessage(text: String) {
+        logger.log("IN: $text")
+        _uiState.update { it.copy(debugLog = logger.getLog()) }
+        try {
+            val response = gson.fromJson(text, ServerResponse::class.java)
+
+            if (response.goAway != null) {
+                logError(
+                    "Server sent goAway. Time left: ${response.goAway.timeLeft}")
+                disconnectWebSocket()
+                return
+            }
+
+            response.inputTranscription?.text?.let { t ->
+                if (t.isNotBlank()) addOrUpdateTranslation(t, true)
+            }
+            response.serverContent?.inputTranscription?.text?.let { t ->
+                if (t.isNotBlank()) addOrUpdateTranslation(t, true)
+            }
+            response.outputTranscription?.text?.let { t ->
+                if (t.isNotBlank()) addOrUpdateTranslation(t, false)
+            }
+            response.serverContent?.outputTranscription?.text?.let { t ->
+                if (t.isNotBlank()) addOrUpdateTranslation(t, false)
+            }
+            response.serverContent?.parts?.firstOrNull()?.inlineData?.data?.let {
+                audioPlayer?.playAudio(it)
+            }
+            response.serverContent?.modelTurn?.parts?.firstOrNull()?.inlineData?.data?.let {
+                audioPlayer?.playAudio(it)
+            }
+            response.sessionResumptionUpdate?.let {
+                sessionHandle = if (it.resumable == true) it.newHandle else null
+                _uiState.update { s ->
+                    s.copy(
+                        toolbarInfoText = "Session: ${sessionHandle ?: "N/A"}"
+                    )
+                }
+                logStatus("Session handle updated. Resumable: ${it.resumable}")
+            }
+        } catch (e: Exception) {
+            logError("Error parsing message: ${e.message}")
+        }
+    }
+
+    override fun onClose(reason: String) {
+        logStatus("Connection closed: $reason")
+        _uiState.update {
+            it.copy(
+                isConnected = false, isReady = false, isListening = false)
+        }
+    }
+
+    override fun onError(message: String) {
+        logError("WebSocket Error: $message")
+        _uiState.update {
+            it.copy(
+                isConnected = false, isReady = false, isListening = false)
+        }
+    }
+
+    private fun addOrUpdateTranslation(text: String, isUser: Boolean) {
+        _uiState.update { currentState ->
+            val newItem = TranslationItem(text = text, isUser = isUser)
+            val newTranslations = currentState.translations.toMutableList().apply {
+                if (isNotEmpty() && first().isUser == isUser) {
+                    set(0, newItem)
+                } else {
+                    add(0, newItem)
                 }
             }
+            currentState.copy(translations = newTranslations)
         }
     }
 
     private fun reloadConfiguration() {
-        viewModelScope.launch {
-            _events.emit(ViewEvent.ShowToast("Configuration reloaded"))
+        if (_uiState.value.isConnected) {
+            disconnectWebSocket()
         }
+        logStatus("Configuration reloaded. Please connect again.")
     }
 
-    private fun checkAudioPermission() {
-        viewModelScope.launch {
-            if (audioHandler.hasRecordAudioPermission(getApplication())) {
-                _events.emit(ViewEvent.ShowToast("Permission already granted"))
-            } else {
-                _events.emit(ViewEvent.ShowError("Please grant microphone permission"))
-            }
-        }
+    private fun handleShareLog() = viewModelScope.launch {
+        logger.getLogFileUri(getApplication())?.let { uri ->
+            _events.emit(ViewEvent.ShareLogFile(uri))
+        } ?: _events.emit(ViewEvent.ShowToast("Log file not available."))
     }
 
-    private fun handleShareLog() {
-        val logFile = debugLog.getLogFile(getApplication<Application>().applicationContext)
-        if (logFile != null) {
-            viewModelScope.launch {
-                _events.emit(ViewEvent.ShareLogFile(logFile))
-            }
-        } else {
-            viewModelScope.launch {
-                _events.emit(ViewEvent.ShowToast("Log file not found."))
-            }
-        }
+    private fun clearDebugLog() = viewModelScope.launch {
+        logger.clear()
+        _uiState.update { it.copy(debugLog = "") }
+        _events.emit(ViewEvent.ShowToast("On-screen log cleared."))
     }
 
-    private fun clearDebugLog() {
-        debugLog.clearLog(getApplication<Application>().applicationContext)
-        viewModelScope.launch { _events.emit(ViewEvent.ShowToast("Debug log cleared.")) }
+    private fun logStatus(message: String) {
+        Log.i("MainViewModel", message)
+        logger.log(message)
+        _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
     }
 
-    private fun showUserSettings() {
-        val userSettingsDialog = UserSettingsDialogFragment()
-        userSettingsDialog.show(supportFragmentManager, "UserSettingsDialog")
+    private fun logError(message: String) {
+        Log.e("MainViewModel", message)
+        logger.log("ERROR: $message")
+        viewModelScope.launch { _events.emit(ViewEvent.ShowError(message)) }
+        _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
     }
 
-    private fun showDevSettings() {
-        val models = listOf(
-            "gemini-2.5-flash-preview-native-audio-dialog",
-            "gemini-2.0-flash-live-001",
-            "gemini-2.5-flash-live-preview"
+    private fun buildWebSocketConfig(): WebSocketConfig {
+        return WebSocketConfig(
+            host = prefs.getString("api_host",
+                "generativelanguage.googleapis.com")!!,
+            modelName = prefs.getString("selected_model",
+                "gemini-2.5-flash-preview-native-audio-dialog")!!,
+            vadSilenceMs = prefs.getInt("vad_sensitivity_ms", 800),
+            apiVersion = prefs.getString("api_version", "v1alpha")!!,
+            apiKey = prefs.getString("api_key", "")!!,
+            sessionHandle = sessionHandle,
+            systemInstruction = Constant.SYSTEM_INSTRUCTION
         )
-        val prefs = getSharedPreferences("BwctransPrefs", Context.MODE_PRIVATE)
-        SettingsDialog(this, this, prefs, models).show()
-    }
-
-    private fun generateSessionId(): String {
-        return "session_${System.currentTimeMillis()}"
-    }
-
-    private fun handleWebSocketMessage(message: String) {
-        // Implement message handling
     }
 
     override fun onCleared() {
         super.onCleared()
-        webSocket?.close(1000, "Activity destroyed")
         audioHandler.stopRecording()
+        audioPlayer?.release()
+        webSocketClient?.disconnect()
     }
 
     sealed class ViewEvent {
         data class ShowToast(val message: String) : ViewEvent()
         data class ShowError(val message: String) : ViewEvent()
-        data class ShareLogFile(val uri: android.net.Uri) : ViewEvent()
+        data class ShareLogFile(val uri: Uri) : ViewEvent()
         object ShowUserSettings : ViewEvent()
         object ShowDevSettings : ViewEvent()
+        object ExportLogsCompleted: ViewEvent() //Added
     }
 
     sealed class UserEvent {
         object MicClicked : UserEvent()
         object ConnectClicked : UserEvent()
+        object DisconnectClicked : UserEvent()
         object SettingsSaved : UserEvent()
         object RequestPermission : UserEvent()
         object ShareLogRequested : UserEvent()
         object ClearLogRequested : UserEvent()
         object UserSettingsClicked : UserEvent()
         object DevSettingsClicked : UserEvent()
+        object ExportLogsCompleted: UserEvent()  //Added
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\translator2\viewmodel\MainViewModelFactory.kt --- 
-package com.bwc.translator2.viewmodel
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\viewmodel\MainViewModelFactory.kt --- 
+package com.bwc.tul.viewmodel
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.bwc.translator2.audio.AudioHandler
-import com.bwc.translator2.network.WebSocketClient
+import com.bwc.tul.audio.AudioHandler
 
 class MainViewModelFactory(
     private val application: Application,
     private val audioHandler: AudioHandler,
-    private val webSocketFactory: WebSocketClient.Companion // Corrected usage of Factory
-) : ViewModelProvider.Factory {
+) : ViewModelProvider.Factory { // line 7
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return MainViewModel(application, audioHandler, webSocketFactory) as T
+            return MainViewModel(application, audioHandler) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketClient.kt --- 
+package com.bwc.tul.websocket
+
+import android.util.Log
+import com.bwc.tul.data.websocket.WebSocketInterceptor
+import com.google.gson.Gson
+import okhttp3.*
+import okio.ByteString
+import java.util.concurrent.TimeUnit
+import android.content.Context
+
+private enum class ClientState {
+    IDLE, CONNECTING, AWAITING_SETUP_COMPLETE, READY
 }
- 
+data class WebSocketConfig(    val host: String,
+                               val modelName: String,
+                               val vadSilenceMs: Int,
+                               val apiVersion: String,
+                               val apiKey: String,
+                               val sessionHandle: String?,
+                               val systemInstruction: String
+)
+
+class WebSocketClient(
+    private val config: WebSocketConfig,
+    private val listener: WebSocketListener,
+    private val context: Context // line 28 Added context
+) {
+    private var webSocket: WebSocket? = null
+    private var state: ClientState = ClientState.IDLE
+    private val gson = Gson()
+
+    private val okHttpClient = OkHttpClient.Builder()
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .addInterceptor(WebSocketInterceptor(context, config.host)) // line 36 Added interceptor
+        .build()
+
+    interface WebSocketListener {
+        fun onConnectionOpen()
+        fun onSetupComplete() // Called when the server confirms setup.
+        fun onMessage(text: String) // For all messages after setup
+        fun onClose(reason: String)
+        fun onError(message: String)
+    }
+
+    fun connect() {
+        if (state != ClientState.IDLE) {
+            Log.w("WebSocketClient", "Already connecting or connected.")
+            return
+        }
+        state = ClientState.CONNECTING
+        Log.d("WebSocketClient", "State -> CONNECTING")
+
+        val url = HttpUrl.Builder()
+            .scheme("https")
+            .host(config.host)
+            .addPathSegments("${config.apiVersion}/models/${config.modelName}:generateAnswer")
+            .addQueryParameter("key", config.apiKey)
+            .build()
+
+        val request = Request.Builder().url(url).build()
+        webSocket = okHttpClient.newWebSocket(request, SocketListener())
+    }
+
+    fun sendAudio(data: ByteArray) {
+        if (state != ClientState.READY) {
+            Log.w("WebSocketClient", "Not ready to send audio yet.")
+            return
+        }
+        webSocket?.send(ByteString.of(*data))
+    }
+
+    fun disconnect() {
+        state = ClientState.IDLE
+        webSocket?.close(1000, "User disconnected")
+        webSocket = null
+    }
+
+    private inner class SocketListener : okhttp3.WebSocketListener() {
+        override fun onOpen(ws: WebSocket, response: Response) {
+            listener.onConnectionOpen()
+            sendSetupMessage(ws)
+        }
+
+        override fun onMessage(ws: WebSocket, text: String) {
+            if (state == ClientState.AWAITING_SETUP_COMPLETE) {
+                if (text.contains("\"setupComplete\"")) {
+                    Log.d("WebSocketClient", "State -> READY")
+                    state = ClientState.READY
+                    listener.onSetupComplete()
+                } else {
+                    Log.w("WebSocketClient",
+                        "Received unexpected message during setup: $text")
+                }
+            } else {
+                listener.onMessage(text)
+            }
+        }
+
+        override fun onClosing(ws: WebSocket, code: Int, reason: String) {
+            state = ClientState.IDLE
+            listener.onClose(reason)
+        }
+
+        override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
+            state = ClientState.IDLE
+            listener.onError(t.message ?: "Unknown WebSocket error")
+        }
+    }
+
+    private fun sendSetupMessage(ws: WebSocket) {
+        state = ClientState.AWAITING_SETUP_COMPLETE
+        Log.d("WebSocketClient", "State -> AWAITING_SETUP_COMPLETE")
+        val setupMessage = mapOf("setup" to mutableMapOf<String, Any>().apply {
+            put("model", "models/${config.modelName}")
+            put("generationConfig", mapOf("responseModalities" to listOf("AUDIO")))
+            put("systemInstruction",
+                createSystemInstruction(config.systemInstruction))
+            put("inputAudioTranscription", emptyMap<String, Any>())
+            put("outputAudioTranscription", emptyMap<String, Any>())
+            put("contextWindowCompression",
+                mapOf("slidingWindow" to emptyMap<String, Any>()))
+            put("realtimeInputConfig", mapOf(
+                "automaticActivityDetection" to mapOf(
+                    "silenceDurationMs" to config.vadSilenceMs)
+            ))
+            config.sessionHandle?.let { handle ->
+                put("sessionResumption", mapOf("handle" to handle))
+            }
+        })
+        val setupJson = gson.toJson(setupMessage)
+        Log.d("WebSocketClient", "Sending setup message...")
+        ws.send(setupJson)
+    }
+
+    private fun createSystemInstruction(instruction: String): Map<String, Any> {
+        return mapOf(
+            "parts" to instruction.split(Regex("\n\n+")).map {
+                mapOf("text" to it.trim())
+            }
+        )
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketInterceptor.kt --- 
+package com.bwc.tul.data.websocket
+
+import android.content.Context
+import okhttp3.*
+import okio.IOException
+import com.bwc.tul.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import okhttp3.Response
+class WebSocketInterceptor(
+    private val context: Context,
+    private val baseUrl: String
+) : Interceptor {
+    private val logger = WebSocketLogger(context)
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        val response = chain.proceed(request)
+
+        return if (isWebSocketUpgrade(response)) {
+            return response.newBuilder()
+                .build()
+        } else {
+            response
+        }
+    }
+
+    private fun isWebSocketUpgrade(response: Response): Boolean {
+        return response.code == 101 &&
+                response.header("Connection")?.equals("Upgrade", ignoreCase = true) == true &&
+                response.header("Upgrade")?.equals("websocket", ignoreCase = true) == true
+    }
+
+    private fun createEventListener(url: String): EventListener {
+        return object : EventListener() {
+            override fun callStart(call: Call) {
+                super.callStart(call)
+                scope.launch {
+                    logger.logSentMessage(url, "WebSocket connection initiated")
+                }
+            }
+
+            override fun callEnd(call: Call) {
+                super.callEnd(call)
+                scope.launch {
+                    logger.logSentMessage(url, "WebSocket connection closed")
+                }
+            }
+
+            override fun callFailed(call: Call, ioe: IOException) {
+                super.callFailed(call, ioe)
+                scope.launch {
+                    logger.logSentMessage(url, "WebSocket connection failed: ${ioe.message}")
+                }
+            }
+        }
+    }
+
+    fun shutdown() {
+        scope.coroutineContext.cancel()
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketLogExporter.kt --- 
+package com.bwc.tul.ui.components
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.bwc.tul.data.websocket.WebSocketLogger
+import kotlinx.coroutines.launch
+import java.io.File
+
+@Composable
+fun WebSocketLogExporter(
+    modifier: Modifier = Modifier,
+    onExportComplete: (File) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isExporting by remember { mutableStateOf(false) }
+
+    Button(
+        onClick = {
+            isExporting = true
+            scope.launch {
+                val file = WebSocketLogger(context).exportLogs()
+                onExportComplete(file)
+                isExporting = false
+            }
+        },
+        modifier = modifier,
+        enabled = !isExporting
+    ) {
+        if (isExporting) {
+            CircularProgressIndicator(Modifier.size(ButtonDefaults.IconSize))
+            Spacer(Modifier.width(8.dp))
+            Text("Exporting...")
+        } else {
+            Text("Export WebSocket Logs")
+        }
+    }
+} 
+--- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketLogger.kt --- 
+package com.bwc.tul.data.websocket
+
+
+import androidx.room.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.File
+import java.util.*
+import android.content.Context
+import com.bwc.tul.data.AppDatabase
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import com.bwc.tul.websocket.*
+
+
+class WebSocketLogger(private val context: Context) {
+    private val dao = AppDatabase.getDatabase(context).webSocketLogDao()
+
+    suspend fun logSentMessage(url: String, message: String) = withContext(Dispatchers.IO) {
+        dao.insert(
+            WebSocketLogEntry(
+                direction = WebSocketLogEntry.Direction.SENT,
+                url = url,
+                message = message
+            )
+        )
+    }
+
+    suspend fun logReceivedMessage(url: String, message: String) = withContext(Dispatchers.IO) {
+        dao.insert(
+            WebSocketLogEntry(
+                direction = WebSocketLogEntry.Direction.RECEIVED,
+                url = url,
+                message = if (isAudioMessage(message)) "[AUDIO DATA]" else message
+            )
+        )
+    }
+
+    suspend fun getLogs(limit: Int = 200): List<WebSocketLogEntry> = withContext(Dispatchers.IO) {
+        dao.getRecentLogs(limit)
+    }
+
+    suspend fun exportLogs(): File = withContext(Dispatchers.IO) {
+        val logs = dao.getAllLogs()
+        val file = File(context.cacheDir, "websocket_logs_${System.currentTimeMillis()}.txt")
+
+        file.writeText(buildString {
+            logs.forEach { log ->
+                appendLine("[${Date(log.timestamp)}] ${log.direction} ${log.url}")
+                if (log.isError) {
+                    appendLine("ERROR: ${log.errorMessage}")
+                }
+                appendLine(log.message)
+                appendLine("=".repeat(80))
+            }
+        })
+        file
+    }
+
+    private fun isAudioMessage(message: String): Boolean {
+        return try {
+            if (message.startsWith("{")) {
+                val json = JSONObject(message)
+                json.has("audio") || json.optString("contentType").contains("audio", ignoreCase = true)
+            } else {
+                message.contains("content-type: audio", ignoreCase = true)
+            }
+        } catch (e: Exception) {
+            false
+        }
+    }
+} 

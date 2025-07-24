@@ -1,11 +1,16 @@
-<resources>    <string name="app_name">Thai Uncensored Language</string>
-
-                <string-array name="api_versions">
-            <item>v1alpha</item>
-            <item>v1</item>
-            <item>v1beta</item>
-            <item>v1beta1</item>
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Thai Uncensored Language</string>
+    
+        <!-- Each item is "DisplayName|api_value" -->
+        <string-array name="api_versions">
+            <item>v1alpha (Stable)|v1alpha</item>
+            <item>v1beta (Preview)|v1beta</item>
+            <item>v1beta1 (Experimental)|v1beta1</item>
+            <item>v1 (Future)|v1</item>
         </string-array>
+
+        <!-- Existing api_keys array -->
         <string-array name="api_keys">
             <item>Rayven:AIzaSyCBnpGnbCKy7gxqMkDkBuCc78Rf40D1auA</item>
             <item>Lan1a:AIzaSyDsTrGpp8mrr470vQrztyz3SOSnoxdtQJc</item>

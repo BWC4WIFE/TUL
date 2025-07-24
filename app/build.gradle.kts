@@ -1,127 +1,155 @@
-plugins {
-    alias(libs.plugins.android.application) version "8.2.2"
-    alias(libs.plugins.kotlin.android) version "1.9.22"
-    }
+import com.android.build.api.dsl.ApplicationExtension
 
+plugins {
+    id("com.android.application")
+    kotlin("android")
+    kotlin("kapt")
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+tasks.withType<JavaCompile> {
+    options.compilerArgs.addAll(
+        listOf(
+            "--add-exports", "jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED",
+            "--add-exports", "jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED"
+        )
+    )
+}
 android {
-    namespace = "com.bwc.translator2"
+    namespace = "com.bwc.tul"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.bwc.translator2"
+        applicationId = "com.bwc.tul"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "0.9"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-    }
-
-    applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .forEach { output ->
-                val outputFileName = "BWC_TRANS2_${variant.buildType.name}_${variant.versionName}.apk"
-                output.outputFileName = outputFileName
-            }
-    }
-
-/*    *//**//*applicationVariants.all {
-        val variant = this
-        variant.outputs
-            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
-            .filter {
-                val names = it.name.split("-")
-                it.name.lowercase().contains(names[0], true) && it.name.lowercase().contains(names[1], true)
-            }
-            .forEach { output ->
-                val outputFileName = "BWC_TRANS2_${variant.buildType.name}_${variant.versionName}.apk"
-                output.outputFileName = outputFileName
-            }
-    }*//**/
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-
-            // --- Set the APK/AAB file name for RELEASE builds ---
-            // Example 1: Basic name with version
-            // archiveFileName.set("Translator2-v${defaultConfig.versionName}.apk")
-
-            // Example 2: More detailed name including version, build type, and build time
-            // We'll use defaultConfig.versionName, defaultConfig.versionCode, and buildType.name
-            // You can also get project.version if you define it at the project level
-            //("Translator2-v${defaultConfig.versionName}(${defaultConfig.versionCode})-release.apk")
-
-            // If you're building an AAB (Android App Bundle) instead of an APK:
-            // archiveFileName.set("Translator2-v${defaultConfig.versionName}(${defaultConfig.versionCode})-release.aab")
-
-
-        }
     }
 
     buildFeatures {
-        dataBinding {
-            enable = true
-        }
-        viewBinding {
-            enable = true
-        }
+        dataBinding = true
         compose = true
-
-    }
-
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.9"
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
-   }
 
-dependencies {
-    // Core & Lifecycle
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.0"
+    }
+}
 
-    // Compose
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.compose.runtime.livedata)
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
 
-    // Coroutines
-    implementation(libs.kotlinx.coroutines.android)
+        /** dependencies {
+            // Core Android
+            implementation("androidx.core:core-ktx:1.12.0")
+            implementation("androidx.appcompat:appcompat:1.6.1")
+            implementation("com.google.android.material:material:1.11.0")
+            implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
-    // Networking
-    implementation(libs.google.gson)
-    implementation(libs.squareup.okhttp)
-    implementation(libs.squareup.logging.interceptor)
+            // Lifecycle
+            implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+            implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+            implementation("androidx.activity:activity-ktx:1.8.2")
+            implementation("androidx.fragment:fragment-ktx:1.6.2")
 
-    // Testing
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
+            // Compose (using BOM)
 
-    // Debug
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+            implementation("androidx.compose:compose-bom:2024.05.00")
+            implementation("androidx.compose.ui:ui")
+            implementation("androidx.compose.ui:ui-graphics")
+            implementation("androidx.compose.ui:ui-tooling-preview")
+            implementation("androidx.compose.material3:material3")
+            implementation("androidx.activity:activity-compose:1.8.2")
+            debugImplementation("androidx.compose.ui:ui-tooling")
+            debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+            // Networking
+            implementation("com.squareup.okhttp3:okhttp:4.12.0")
+            implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+            implementation("com.google.code.gson:gson:2.10.1")
+
+            // Room
+            implementation("androidx.room:room-runtime:2.6.1")
+            implementation("androidx.room:room-ktx:2.6.1")
+            kapt("androidx.room:room-compiler:2.6.1")
+
+            // Coroutines
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+            // Testing
+            testImplementation("junit:junit:4.13.2")
+            androidTestImplementation("androidx.test.ext:junit:1.1.5")
+            androidTestImplementation("androidx.compose:compose-bom:2024.05.00")
+            androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+            androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+            val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
+            implementation(composeBom)
+
+            // Then declare your Compose dependencies without versions
+            implementation("androidx.compose.ui:ui")
+            implementation("androidx.compose.ui:ui-tooling-preview")
+            implementation("androidx.compose.material3:material3")
+
+            debugImplementation("androidx.compose.ui:ui-tooling")
+            debugImplementation("androidx.compose.ui:ui-test-manifest")
+        }
+        */
+        dependencies{
+val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
+implementation(composeBom)
+androidTestImplementation(composeBom)
+
+// Core Android
+implementation("androidx.core:core-ktx:1.12.0")
+implementation("androidx.appcompat:appcompat:1.6.1")
+implementation("com.google.android.material:material:1.11.0")
+
+// Compose
+implementation("androidx.compose.ui:ui")
+implementation("androidx.compose.ui:ui-graphics")
+implementation("androidx.compose.material3:material3")
+implementation("androidx.activity:activity-compose:1.8.2")
+
+debugImplementation("androidx.compose.ui:ui-tooling")
+debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+// Lifecycle
+implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
+implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")
+
+// Networking
+implementation("com.squareup.okhttp3:okhttp:4.12.0")
+implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+implementation("com.google.code.gson:gson:2.10.1")
+
+// Room
+implementation("androidx.room:room-runtime:2.6.1")
+implementation("androidx.room:room-ktx:2.6.1")
+kapt("androidx.room:room-compiler:2.6.1")
+
+// Coroutines
+implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+// Testing
+testImplementation("junit:junit:4.13.2")
+androidTestImplementation("androidx.test.ext:junit:1.1.5")
+androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
