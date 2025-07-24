@@ -1,17 +1,22 @@
 [versions]
-agp = "8.2.2"
-kotlin = "1.9.22"
+activityCompose = "1.9.0"
+activityKtx = "1.8.8"
+agp = "8.1.1"
+composeBom = "2024.05.00"
+composeRuntimeLivedata = "1.7.0"
 coreKtx = "1.12.0"
-junit = "4.13.2"
-junitVersion = "1.2.1"  # Note: 1.2.1 is not a standard version, likely meant 1.1.5
-espressoCore = "3.6.1" # Note: 3.6.1 is not a standard version, likely meant 3.5.1
-lifecycle = "2.8.1"
-activityCompose = "1.9.1" # Note: 1.9.1 is not a standard version, using 1.9.0
-composeBom = "2024.04.00" # Using a more recent stable version
-composeRuntimeLivedata = "1.6.7"
-kotlinxCoroutines = "1.7.3"
+espressoCore = "3.5.1"
+fragmentKtx = "1.8.0"
 gson = "2.10.1"
+junit = "4.13.2"
+junitVersion = "1.1.5"
+kotlin = "1.9.0"
+kotlinxCoroutines = "1.7.3"
+lifecycle = "2.6.2"
+material = "1.11.0"
 okhttp = "4.12.0"
+recyclerview = "1.3.2"
+room = "2.6.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -19,30 +24,30 @@ androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecyc
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "composeRuntimeLivedata" }
-
-# Compose Bill of Materials (BOM)
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
-
-# Coroutines
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinxCoroutines" }
-
-# Networking
 google-gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
 squareup-okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 squareup-logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
-
-# Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }           # Added
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }         # Added
+androidx-material = { group = "com.google.android.material", name = "material", version.ref = "material" }          # Added
+androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }    # Added
+androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }                   # Added
+androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }                           # Added for coroutines support
+androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }                 # Added for annotation processor
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }                                         # Added for Room annotation processing
