@@ -6,7 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.bwc.tul.data.websocket.WebSocketLogger
+import com.bwc.tul.websocket.WebSocketLogger
 import kotlinx.coroutines.launch
 import java.io.File
 

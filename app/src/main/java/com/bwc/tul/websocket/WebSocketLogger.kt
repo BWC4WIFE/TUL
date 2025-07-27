@@ -1,18 +1,14 @@
-package com.bwc.tul.data.websocket
+package com.bwc.tul.websocket
 
 
-import androidx.room.*
+import android.content.Context
+import com.bwc.tul.data.AppDatabase
+import com.bwc.tul.data.websocket.WebSocketLogEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.util.*
-import android.content.Context
-import com.bwc.tul.data.AppDatabase
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import com.bwc.tul.websocket.*
 
 
 class WebSocketLogger(private val context: Context) {
@@ -34,6 +30,28 @@ class WebSocketLogger(private val context: Context) {
                 direction = WebSocketLogEntry.Direction.RECEIVED,
                 url = url,
                 message = if (isAudioMessage(message)) "[AUDIO DATA]" else message
+            )
+        )
+    }
+
+    suspend fun logStatus(url: String, message: String) = withContext(Dispatchers.IO) {
+        dao.insert(
+            WebSocketLogEntry(
+                direction = WebSocketLogEntry.Direction.STATUS,
+                url = url,
+                message = message
+            )
+        )
+    }
+
+    suspend fun logError(url: String, message: String, error: String?) = withContext(Dispatchers.IO) {
+        dao.insert(
+            WebSocketLogEntry(
+                direction = WebSocketLogEntry.Direction.ERROR,
+                url = url,
+                message = message,
+                isError = true,
+                errorMessage = error
             )
         )
     }

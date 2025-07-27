@@ -25,7 +25,7 @@ tasks.withType<JavaCompile> {
 }
 android {
     namespace = "com.bwc.tul"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.bwc.tul"
@@ -112,7 +112,8 @@ android {
         }
         */
         dependencies{
-val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
+implementation(libs.androidx.ui.text.google.fonts)
+            val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
 implementation(composeBom)
 androidTestImplementation(composeBom)
 

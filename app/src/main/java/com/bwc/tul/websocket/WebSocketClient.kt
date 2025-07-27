@@ -1,12 +1,14 @@
 package com.bwc.tul.websocket
 
 import android.util.Log
-import com.bwc.tul.data.websocket.WebSocketInterceptor
 import com.google.gson.Gson
 import okhttp3.*
 import okio.ByteString
 import java.util.concurrent.TimeUnit
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private enum class ClientState {
     IDLE, CONNECTING, AWAITING_SETUP_COMPLETE, READY
@@ -23,15 +25,17 @@ data class WebSocketConfig(    val host: String,
 class WebSocketClient(
     private val config: WebSocketConfig,
     private val listener: WebSocketListener,
-    private val context: Context // line 28 Added context
+    private val context: Context
 ) {
     private var webSocket: WebSocket? = null
     private var state: ClientState = ClientState.IDLE
     private val gson = Gson()
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private val webSocketLogger by lazy { WebSocketLogger(context) }
 
     private val okHttpClient = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
-        .addInterceptor(WebSocketInterceptor(context, config.host)) // line 36 Added interceptor
+        .addInterceptor(WebSocketInterceptor(context, config.host))
         .build()
 
     interface WebSocketListener {
@@ -42,7 +46,7 @@ class WebSocketClient(
         fun onError(message: String)
     }
 
-    fun connect() {
+   fun connect() {
         if (state != ClientState.IDLE) {
             Log.w("WebSocketClient", "Already connecting or connected.")
             return
@@ -58,7 +62,7 @@ class WebSocketClient(
             .build()
 
         val request = Request.Builder().url(url).build()
-        webSocket = okHttpClient.newWebSocket(request, SocketListener())
+        webSocket = okHttpClient.newWebSocket(request, SocketListener(url.toString()))
     }
 
     fun sendAudio(data: ByteArray) {
@@ -67,6 +71,11 @@ class WebSocketClient(
             return
         }
         webSocket?.send(ByteString.of(*data))
+        webSocket?.request()?.url?.toString()?.let { url ->
+            scope.launch {
+                webSocketLogger.logSentMessage(url, "[AUDIO DATA of size ${data.size}]")
+            }
+        }
     }
 
     fun disconnect() {
@@ -75,13 +84,15 @@ class WebSocketClient(
         webSocket = null
     }
 
-    private inner class SocketListener : okhttp3.WebSocketListener() {
+    private inner class SocketListener(private val url: String) : okhttp3.WebSocketListener() {
         override fun onOpen(ws: WebSocket, response: Response) {
+            scope.launch { webSocketLogger.logReceivedMessage(url, "Connection Opened: ${response.code}") }
             listener.onConnectionOpen()
             sendSetupMessage(ws)
         }
 
         override fun onMessage(ws: WebSocket, text: String) {
+            scope.launch { webSocketLogger.logReceivedMessage(url, text) }
             if (state == ClientState.AWAITING_SETUP_COMPLETE) {
                 if (text.contains("\"setupComplete\"")) {
                     Log.d("WebSocketClient", "State -> READY")
@@ -98,11 +109,13 @@ class WebSocketClient(
 
         override fun onClosing(ws: WebSocket, code: Int, reason: String) {
             state = ClientState.IDLE
+            scope.launch { webSocketLogger.logReceivedMessage(url, "Closing: $code / $reason") }
             listener.onClose(reason)
         }
 
         override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
             state = ClientState.IDLE
+            scope.launch { webSocketLogger.logError(url, "Failure: ${t.message}", t.stackTraceToString()) }
             listener.onError(t.message ?: "Unknown WebSocket error")
         }
     }
@@ -130,6 +143,7 @@ class WebSocketClient(
         val setupJson = gson.toJson(setupMessage)
         Log.d("WebSocketClient", "Sending setup message...")
         ws.send(setupJson)
+        scope.launch { webSocketLogger.logSentMessage(ws.request().url.toString(), setupJson) }
     }
 
     private fun createSystemInstruction(instruction: String): Map<String, Any> {

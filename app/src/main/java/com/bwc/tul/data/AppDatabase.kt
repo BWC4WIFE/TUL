@@ -6,6 +6,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bwc.tul.data.websocket.WebSocketLogEntry
 import java.util.Date
+
+@Database(entities = [ConversationSession::class, TranslationEntry::class, WebSocketLogEntry::class], version = 3, exportSchema = false)
 @TypeConverters(AppDatabase.Converters::class) // Reference nested Converters class
 abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao

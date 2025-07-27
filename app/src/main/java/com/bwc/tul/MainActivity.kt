@@ -1,29 +1,25 @@
 package com.bwc.tul
 
 import android.content.Context
-import android.util.Log
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.fragment.app.FragmentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.bwc.tul.audio.AudioHandler
-import androidx.activity.compose.setContent
-import com.bwc.tul.audio.AudioPlayer.Companion.TAG
 import com.bwc.tul.ui.dialog.SettingsDialog
-import com.bwc.tul.ui.dialog.UserSettingsDialogFragment
-import com.bwc.tul.ui.TranslationAdapter
+import com.bwc.tul.ui.dialog.UserSettingsDialog
+import com.bwc.tul.ui.view.MainScreenContent
 import com.bwc.tul.viewmodel.MainViewModel
 import com.bwc.tul.viewmodel.MainViewModelFactory
 import kotlinx.coroutines.launch
-import java.io.File
 
-class MainActivity : FragmentActivity(),
-    UserSettingsDialogFragment.UserSettingsListener,
-    SettingsDialog.DevSettingsListener {
+class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels {
         MainViewModelFactory(
@@ -39,8 +35,7 @@ class MainActivity : FragmentActivity(),
         super.onCreate(savedInstanceState)
 
         setContent {
-            val uiState by viewModel.uiState.collectAsState()
-            MainScreen(viewModel = viewModel)
+            MainScreen()
         }
 
         lifecycleScope.launch {
@@ -49,18 +44,52 @@ class MainActivity : FragmentActivity(),
                     is MainViewModel.ViewEvent.ShowToast -> showToast(event.message)
                     is MainViewModel.ViewEvent.ShowError -> showError(event.message)
                     is MainViewModel.ViewEvent.ShareLogFile -> shareLogFile(event.uri)
-                    is MainViewModel.ViewEvent.ShowUserSettings -> showUserSettings()
-                    is MainViewModel.ViewEvent.ShowDevSettings -> showDevSettings()
                     is MainViewModel.ViewEvent.ExportLogsCompleted -> {
-                        // Handle the export logs completed event
-                        showToast("Web Socket Logs Exported") }
+                        showToast("Web Socket Logs Exported")
                     }
+                }
             }
         }
     }
 
-    override fun onRequestPermission() {
-        viewModel.handleEvent(MainViewModel.UserEvent.RequestPermission)
+    @Composable
+    private fun MainScreen() {
+        val uiState by viewModel.uiState.collectAsState()
+        val prefs = getSharedPreferences("BwctransPrefs", Context.MODE_PRIVATE)
+
+        MainScreenContent(
+            onBackClick = { finish() },
+            uiState = uiState,
+            onMicClick = { viewModel.handleEvent(MainViewModel.UserEvent.MicClicked) },
+            onConnectDisconnect = {
+                if (uiState.isConnected) {
+                    viewModel.handleEvent(MainViewModel.UserEvent.DisconnectClicked)
+                } else {
+                    viewModel.handleEvent(MainViewModel.UserEvent.ConnectClicked)
+                }
+            },
+            onSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.ShowUserSettings) },
+            onDevSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.ShowDevSettings) }
+        )
+
+        if (uiState.showUserSettings) {
+            UserSettingsDialog(
+                prefs = prefs,
+                onDismiss = { viewModel.handleEvent(MainViewModel.UserEvent.DismissDialog) },
+                onSave = { apiKey, sourceLang, targetLang ->
+                    viewModel.handleEvent(MainViewModel.UserEvent.SettingsSaved(apiKey, sourceLang, targetLang))
+                }
+            )
+        }
+
+        if (uiState.showDevSettings) {
+            SettingsDialog(
+                onDismissRequest = { viewModel.handleEvent(MainViewModel.UserEvent.DismissDialog) },
+                listener = viewModel,
+                prefs = prefs,
+                models = listOf("gemini-1.5-flash-preview-native-audio-dialog")
+            )
+        }
     }
 
     private fun showToast(message: String) {
@@ -78,65 +107,5 @@ class MainActivity : FragmentActivity(),
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startActivity(Intent.createChooser(shareIntent, "Share log file"))
-    }
-
-    private fun showUserSettings() {
-        val dialog = UserSettingsDialogFragment()
-        dialog.show(supportFragmentManager, "UserSettingsDialog")
-    }
-
-    private fun showDevSettings() {
-
-        val models = listOf(
-            "gemini-2.5-flash-preview-native-audio-dialog",
-            "gemini-2.0-flash-live-001",
-            "gemini-2.5-flash-live-preview"
-        )
-        val prefs = getSharedPreferences("BwctransPrefs", Context.MODE_PRIVATE)
-        SettingsDialog(this, this, prefs, models).show()
-    }
-
-    override fun onForceConnect() {
-        viewModel.handleEvent(MainViewModel.UserEvent.ConnectClicked)
-    }
-
-    override fun onSettingsSaved() {
-        viewModel.handleEvent(MainViewModel.UserEvent.SettingsSaved)
-    }
-
-    override fun onShareLog() {
-        viewModel.handleEvent(MainViewModel.UserEvent.ShareLogRequested)
-    }
-
-    override fun onClearLog() {
-        viewModel.handleEvent(MainViewModel.UserEvent.ClearLogRequested)
-    }
-
-    override fun onExportLogsComplete(file: File) {
-        // Handle the exported log file (e.g., share it).
-        viewModel.handleEvent(MainViewModel.UserEvent.ExportLogsCompleted)
-
-        val uri: android.net.Uri? = try {
-            androidx.core.content.FileProvider.getUriForFile(
-                this,
-                "${packageName}.provider", // Make sure this matches your FileProvider authority
-                file
-            )
-        } catch (e: Exception) {
-            showError("Error creating log file URI for sharing: ${e.message}")
-            Log.e(TAG, "Error creating log file UIR", e)
-            null
-        }
-
-        uri?.let {
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_STREAM, it)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(Intent.createChooser(shareIntent, "Share WebSocket log file"))
-        } ?: run {
-            showToast("Couldn't create log file for sharing.")
-        }
     }
 }

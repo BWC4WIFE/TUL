@@ -14,5 +14,5 @@ data class WebSocketLogEntry(
     @ColumnInfo(name = "is_error") val isError: Boolean = false,
     @ColumnInfo(name = "error_message") val errorMessage: String? = null
 ) {
-    enum class Direction { SENT, RECEIVED }
+    enum class Direction { SENT, RECEIVED, STATUS, ERROR }
 }

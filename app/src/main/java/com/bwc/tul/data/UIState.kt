@@ -13,6 +13,7 @@ data class UIState(
     val isConnected: Boolean = false,
     val isSending: Boolean = false,
     val isReady: Boolean = false,
-    val lastAudioSentTime: Long = 0
+    val lastAudioSentTime: Long = 0,
+    val showUserSettings: Boolean = false,
+    val showDevSettings: Boolean = false
 )
-

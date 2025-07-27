@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -17,10 +18,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
 
-/**
- * A stateless composable for displaying user settings.
- * State is hoisted to the caller.
- */
 @Composable
 fun UserSettingsContent(
     apiKey: String,
@@ -30,7 +27,7 @@ fun UserSettingsContent(
     targetLang: String,
     onTargetLangChange: (String) -> Unit,
     onSave: () -> Unit,
-
+    onDismiss: () -> Unit
 ) {
     Surface(modifier = Modifier.padding(16.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -60,11 +57,19 @@ fun UserSettingsContent(
             Button(onClick = onSave, modifier = Modifier.fillMaxWidth()) {
                 Text("Save and Dismiss")
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Text("Cancel")
+            }
         }
     }
 }
-
-
 
 @Preview(showBackground = true)
 @Composable

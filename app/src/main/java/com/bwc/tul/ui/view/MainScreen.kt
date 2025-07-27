@@ -1,5 +1,6 @@
 package com.bwc.tul.ui.view
 
+import androidx.compose.ui.Alignment
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
@@ -11,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -23,13 +23,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.bwc.tul.data.UIState
 import com.bwc.tul.ui.components.StatusBar
-import com.bwc.tul.ui.dialog.StatefulSettingsDialog
 import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
 import com.bwc.tul.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreenContent(
+    onBackClick: () -> Unit,
     uiState: UIState,
     onMicClick: () -> Unit,
     onConnectDisconnect: () -> Unit,
@@ -54,36 +54,40 @@ fun MainScreenContent(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = { /* handle back */ }) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_69_white),
-                            contentDescription = "Back"
-                        )
-                    }
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.size(48.dp))
+                        {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_69_white),
+                                contentDescription = "Back",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                 },
                 actions = {
-                    // Fixed icon spacing with proper padding
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         IconButton(
-                            onClick = onSettingsClick
-                        ){
-                          Icon(
+                            onClick = onSettingsClick,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
                                 Icons.Filled.Settings,
                                 contentDescription = "Settings",
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                         IconButton(
-                            onClick = onDevSettingsClick
-                        ){
-
+                            onClick = onDevSettingsClick,
+                            modifier = Modifier.size(50.dp)
+                        ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.ic_history),
+                                painter = painterResource(id = R.drawable.ic_bj),
                                 contentDescription = "History",
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
@@ -91,26 +95,58 @@ fun MainScreenContent(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onMicClick,
-                modifier = Modifier.padding(16.dp),
-                containerColor = if (uiState.isListening) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.primary
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                contentAlignment = Alignment.BottomCenter
             ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_stand_bj),
-                    contentDescription = "Mic"
-                )
+                FloatingActionButton(
+                    onClick = onMicClick,
+                    containerColor = if (uiState.isListening) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_stand_bj),
+                        contentDescription = "Mic"
+                    )
+                }
             }
         },
         bottomBar = {
-            StatusBar(
-                statusText = uiState.statusText,
-                toolbarInfoText = uiState.toolbarInfoText,
-                isSessionActive = uiState.isReady,
-                onConnectDisconnect = onConnectDisconnect,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                // Circular connect button on the left
+                IconButton(
+                    onClick = onConnectDisconnect,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .align(Alignment.CenterStart),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = if (uiState.isConnected)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.secondary
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_69_black),
+                        contentDescription = if (uiState.isConnected) "Disconnect" else "Connect",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                StatusBar(
+                    statusText = uiState.statusText,
+                    toolbarInfoText = uiState.toolbarInfoText,
+                    isSessionActive = uiState.isReady,
+                    onConnectDisconnect = onConnectDisconnect,
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                )
+            }
         }
     ) { paddingValues ->
         Box(
@@ -167,7 +203,7 @@ fun MainScreenContent(
     }
 }
 
-// Preview functions remain unchanged from your original code
+// Preview functions
 @Preview(showBackground = true, name = "Main Screen - Disconnected Empty")
 @Composable
 fun MainScreenDisconnectedEmptyPreview() {
@@ -185,7 +221,8 @@ fun MainScreenDisconnectedEmptyPreview() {
             onMicClick = {},
             onConnectDisconnect = {},
             onSettingsClick = {},
-            onDevSettingsClick = {}
+            onDevSettingsClick = {},
+            onBackClick = {},
         )
     }
 }
@@ -210,7 +247,8 @@ fun MainScreenConnectedListeningPreview() {
             onMicClick = {},
             onConnectDisconnect = {},
             onSettingsClick = {},
-            onDevSettingsClick = {}
+            onDevSettingsClick = {},
+            onBackClick = {},
         )
     }
 }
