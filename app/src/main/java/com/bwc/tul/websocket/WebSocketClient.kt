@@ -60,6 +60,10 @@ class WebSocketClient(
             .addPathSegments("${config.apiVersion}/models/${config.modelName}:generateAnswer")
             .addQueryParameter("key", config.apiKey)
             .build()
+			
+			scope.launch {
+        webSocketLogger.logStatus(url.toString(), "Attempting to connect...")
+    }
 
         val request = Request.Builder().url(url).build()
         webSocket = okHttpClient.newWebSocket(request, SocketListener(url.toString()))

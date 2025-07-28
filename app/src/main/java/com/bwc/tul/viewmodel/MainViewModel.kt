@@ -3,13 +3,14 @@ package com.bwc.tul.viewmodel
 import android.app.Application
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bwc.tul.audio.AudioHandler
 import com.bwc.tul.audio.AudioPlayer
+import com.bwc.tul.data.AppDatabase
 import com.bwc.tul.data.ServerResponse
 import com.bwc.tul.data.UIState
+import com.bwc.tul.ui.components.Constant
 import com.bwc.tul.ui.dialog.DevSettingsListener
 import com.bwc.tul.ui.view.TranslationItem
 import com.bwc.tul.util.DebugLogger
@@ -25,7 +26,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import com.bwc.tul.ui.components.Constant
 
 class MainViewModel(
     application: Application,
@@ -40,12 +40,17 @@ class MainViewModel(
 
     private var webSocketClient: WebSocketClient? = null
     private val gson = Gson()
-    private val logger = DebugLogger
+
     private var audioPlayer: AudioPlayer? = null
     private var sessionHandle: String? = null
 
     private val prefs = application.getSharedPreferences(
         "BwctransPrefs", Context.MODE_PRIVATE)
+
+    init {
+        val logDao = AppDatabase.getDatabase(application).logDao()
+
+    }
 
     override fun onSettingsSaved() {
         _uiState.update { it.copy(showDevSettings = false) }
@@ -180,8 +185,10 @@ class MainViewModel(
     }
 
     override fun onMessage(text: String) {
-        logger.log("IN: $text")
-        _uiState.update { it.copy(debugLog = logger.getLog()) }
+        // Corrected call to logger.log
+
+        DebugLogger.log("INFO", "WebSocket", "IN: $text")
+        // Removed updating the on-screen debug log, as it's now in the database
         try {
             val response = gson.fromJson(text, ServerResponse::class.java)
 
@@ -256,28 +263,29 @@ class MainViewModel(
     }
 
     private fun handleShareLog() = viewModelScope.launch {
-        logger.getLogFileUri(getApplication())?.let { uri ->
+        DebugLogger.getLogFileUri(getApplication())?.let { uri ->
             _events.emit(ViewEvent.ShareLogFile(uri))
         } ?: _events.emit(ViewEvent.ShowToast("Log file not available."))
     }
 
-    private fun clearDebugLog() = viewModelScope.launch {
-        logger.clear()
+    private suspend fun clearDebugLog() {
+        DebugLogger.clear()
+        // Removed on-screen log clearing, as it's deprecated
         _uiState.update { it.copy(debugLog = "") }
-        _events.emit(ViewEvent.ShowToast("On-screen log cleared."))
+        _events.emit(ViewEvent.ShowToast("Debug log database cleared."))
     }
 
     private fun logStatus(message: String) {
-        Log.i("MainViewModel", message)
-        logger.log(message)
-        _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
+        // Corrected call
+        DebugLogger.log("INFO", "MainViewModel", message)
+        _uiState.update { it.copy(statusText = message) }
     }
 
     private fun logError(message: String) {
-        Log.e("MainViewModel", message)
-        logger.log("ERROR: $message")
+        // Corrected call
+        DebugLogger.log("ERROR", "MainViewModel", message)
         viewModelScope.launch { _events.emit(ViewEvent.ShowError(message)) }
-        _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
+        _uiState.update { it.copy(statusText = message) }
     }
 
     private fun buildWebSocketConfig(): WebSocketConfig {

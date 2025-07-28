@@ -2,10 +2,8 @@ package com.bwc.tul.data
 
 
 import androidx.room.*
-import com.bwc.tul.data.ConversationSession
-import com.bwc.tul.data.SessionWithPreview
-import com.bwc.tul.data.TranslationEntry
 import com.bwc.tul.data.websocket.WebSocketLogEntry
+import com.bwc.tul.data.LogEntry
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -55,4 +53,17 @@ interface WebSocketLogDao {
 
     @Query("DELETE FROM websocket_logs WHERE timestamp < :cutoffTime")
     suspend fun deleteOldLogs(cutoffTime: Long)
+}
+
+@Dao
+interface LogDao {
+    @Insert
+    suspend fun insert(log: LogEntry)
+
+    // Change from @Insert to @Query for read operations
+    @Query("SELECT * FROM logs ORDER BY timestamp DESC")
+    suspend fun getLogs(): List<LogEntry>
+
+    @Query("DELETE FROM logs")
+    suspend fun clearAll()
 }

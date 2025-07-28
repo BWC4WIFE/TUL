@@ -1,31 +1,27 @@
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\MainActivity.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\MainActivity.kt --- 
 package com.bwc.tul
 
 import android.content.Context
-import android.util.Log
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.fragment.app.FragmentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.bwc.tul.audio.AudioHandler
-import androidx.activity.compose.setContent
-import com.bwc.tul.audio.AudioPlayer.Companion.TAG
 import com.bwc.tul.ui.dialog.SettingsDialog
-import com.bwc.tul.ui.dialog.UserSettingsDialogFragment
+import com.bwc.tul.ui.dialog.UserSettingsDialog
 import com.bwc.tul.ui.view.MainScreenContent
 import com.bwc.tul.viewmodel.MainViewModel
 import com.bwc.tul.viewmodel.MainViewModelFactory
 import kotlinx.coroutines.launch
-import java.io.File
 
-class MainActivity : FragmentActivity(),
-    UserSettingsDialogFragment.UserSettingsListener {
+class MainActivity : FragmentActivity() {
 
     private val viewModel: MainViewModel by viewModels {
         MainViewModelFactory(
@@ -50,8 +46,6 @@ class MainActivity : FragmentActivity(),
                     is MainViewModel.ViewEvent.ShowToast -> showToast(event.message)
                     is MainViewModel.ViewEvent.ShowError -> showError(event.message)
                     is MainViewModel.ViewEvent.ShareLogFile -> shareLogFile(event.uri)
-                    is MainViewModel.ViewEvent.ShowUserSettings -> showUserSettings()
-                    is MainViewModel.ViewEvent.ShowDevSettings -> showDevSettings()
                     is MainViewModel.ViewEvent.ExportLogsCompleted -> {
                         showToast("Web Socket Logs Exported")
                     }
@@ -63,6 +57,8 @@ class MainActivity : FragmentActivity(),
     @Composable
     private fun MainScreen() {
         val uiState by viewModel.uiState.collectAsState()
+        val prefs = getSharedPreferences("BwctransPrefs", Context.MODE_PRIVATE)
+
         MainScreenContent(
             onBackClick = { finish() },
             uiState = uiState,
@@ -74,13 +70,28 @@ class MainActivity : FragmentActivity(),
                     viewModel.handleEvent(MainViewModel.UserEvent.ConnectClicked)
                 }
             },
-            onSettingsClick = { showUserSettings() },
-            onDevSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.DevSettingsClicked) }
+            onSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.ShowUserSettings) },
+            onDevSettingsClick = { viewModel.handleEvent(MainViewModel.UserEvent.ShowDevSettings) }
         )
-    }
 
-    override fun onRequestPermission() {
-        viewModel.handleEvent(MainViewModel.UserEvent.RequestPermission)
+        if (uiState.showUserSettings) {
+            UserSettingsDialog(
+                prefs = prefs,
+                onDismiss = { viewModel.handleEvent(MainViewModel.UserEvent.DismissDialog) },
+                onSave = { apiKey, sourceLang, targetLang ->
+                    viewModel.handleEvent(MainViewModel.UserEvent.SettingsSaved(apiKey, sourceLang, targetLang))
+                }
+            )
+        }
+
+        if (uiState.showDevSettings) {
+            SettingsDialog(
+                onDismissRequest = { viewModel.handleEvent(MainViewModel.UserEvent.DismissDialog) },
+                listener = viewModel,
+                prefs = prefs,
+                models = listOf("gemini-1.5-flash-preview-native-audio-dialog")
+            )
+        }
     }
 
     private fun showToast(message: String) {
@@ -99,21 +110,8 @@ class MainActivity : FragmentActivity(),
         }
         startActivity(Intent.createChooser(shareIntent, "Share log file"))
     }
-
-    private fun showUserSettings() {
-        val dialog = UserSettingsDialogFragment()
-        dialog.show(supportFragmentManager, "UserSettingsDialog")
-    }
-
-    private fun showDevSettings() {
-        viewModel.handleEvent(MainViewModel.UserEvent.DevSettingsClicked)
-    }
-
-    override fun onSettingsSaved() {
-        viewModel.handleEvent(MainViewModel.UserEvent.SettingsSaved)
-    }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\audio\AudioHandler.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\audio\AudioHandler.kt --- 
 package com.bwc.tul.audio
 
 import android.Manifest
@@ -227,7 +225,7 @@ class AudioHandler(
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\audio\AudioPlayer.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\audio\AudioPlayer.kt --- 
 package com.bwc.tul.audio
 
 import android.media.AudioAttributes
@@ -237,17 +235,16 @@ import android.util.Base64
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 
 class AudioPlayer {
 
     private var audioTrack: AudioTrack? = null
     private val scope = CoroutineScope(Dispatchers.IO)
+    private val audioQueue = Channel<ByteArray>(Channel.UNLIMITED)
 
-    // --- NEW: Add a lock object for synchronization ---
-    private val audioLock = Any()
-
-    // --- NEW: Add a volatile flag to track the released state ---
     @Volatile private var isReleased = false
 
     companion object {
@@ -263,7 +260,6 @@ class AudioPlayer {
                 AudioFormat.ENCODING_PCM_16BIT
             )
 
-            // The initialization is thread-safe as it's in the constructor
             audioTrack = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
@@ -278,53 +274,54 @@ class AudioPlayer {
                         .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
                         .build()
                 )
-                .setBufferSizeInBytes(minBufferSize * 2) // Increase buffer size for stability
+                .setBufferSizeInBytes(minBufferSize * 2)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
             audioTrack?.play()
             Log.d(TAG, "AudioTrack initialized and playing.")
+            startConsumingAudio() // Start the single consumer coroutine
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize AudioTrack", e)
         }
     }
 
+    private fun startConsumingAudio() {
+        scope.launch {
+            audioQueue.consumeAsFlow().collect { audioData ->
+                if (!isReleased && audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                    try {
+                        audioTrack?.write(audioData, 0, audioData.size)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to write audio data to track", e)
+                    }
+                }
+            }
+        }
+    }
+
     fun playAudio(base64Audio: String) {
-        // --- MODIFIED: Check the isReleased flag first ---
         if (isReleased) {
             Log.w(TAG, "AudioPlayer is released, skipping audio chunk.")
             return
         }
-
         scope.launch {
             try {
                 val decodedData = Base64.decode(base64Audio, Base64.DEFAULT)
-                
-                // --- MODIFIED: Use the synchronized block ---
-                // This ensures that `release()` cannot run at the same time as `write()`.
-                synchronized(audioLock) {
-                    // Double-check the released status inside the lock before writing
-                    if (!isReleased && audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                        audioTrack?.write(decodedData, 0, decodedData.size)
-                    }
-                }
-            } catch (e: Exception) {
-                // This will catch IllegalArgumentException from Base64 as well
-                Log.e(TAG, "Failed to decode or play audio chunk", e)
+                audioQueue.send(decodedData) // Send data to the channel instead of writing directly
+            } catch (e: IllegalArgumentException) {
+                Log.e(TAG, "Failed to decode Base64 audio chunk", e)
             }
         }
     }
 
     fun release() {
-        // --- MODIFIED: Use the synchronized block ---
-        // This ensures no other thread can access the audioTrack while we're releasing it.
-        synchronized(audioLock) {
-            if (isReleased) return
-            isReleased = true // Set the flag to true immediately inside the lock
-
-            Log.d(TAG, "Releasing AudioTrack...")
+        if (isReleased) return
+        isReleased = true
+        Log.d(TAG, "Releasing AudioTrack...")
+        scope.launch {
+            audioQueue.close() // Close the channel
             try {
-                // Check if audioTrack is not null and is playing before stopping
                 if (audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
                     audioTrack?.flush()
                     audioTrack?.stop()
@@ -339,7 +336,7 @@ class AudioPlayer {
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\ApiModels.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\ApiModels.kt --- 
 package com.bwc.tul.data
 
 // Data class for API Versions (e.g., "v1alpha (Preview)" and "v1alpha")
@@ -364,7 +361,7 @@ data class ApiKeyInfo(
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\AppDatabase.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\AppDatabase.kt --- 
 package com.bwc.tul.data
 
 import android.content.Context
@@ -372,12 +369,16 @@ import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bwc.tul.data.websocket.WebSocketLogEntry
+import com.bwc.tul.data.LogEntry
 import java.util.Date
-@TypeConverters(AppDatabase.Converters::class) // Reference nested Converters class
+
+@Database(entities = [ConversationSession::class, TranslationEntry::class, WebSocketLogEntry::class, LogEntry::class], version = 4, exportSchema = false)
+@TypeConverters(AppDatabase.Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun entryDao(): EntryDao
     abstract fun webSocketLogDao(): WebSocketLogDao
+    abstract fun logDao(): LogDao
 
     companion object {
         @Volatile
@@ -390,7 +391,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "translator_database"
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance
@@ -412,6 +413,20 @@ abstract class AppDatabase : RoomDatabase() {
                 """)
             }
         }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `logs` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        `level` TEXT NOT NULL,
+                        `tag` TEXT NOT NULL,
+                        `message` TEXT NOT NULL
+                    )
+                """)
+            }
+        }
     }
 
     class Converters {
@@ -422,15 +437,13 @@ abstract class AppDatabase : RoomDatabase() {
         fun dateToTimestamp(date: Date?): Long? = date?.time
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\Daos.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\Daos.kt --- 
 package com.bwc.tul.data
 
 
 import androidx.room.*
-import com.bwc.tul.data.ConversationSession
-import com.bwc.tul.data.SessionWithPreview
-import com.bwc.tul.data.TranslationEntry
 import com.bwc.tul.data.websocket.WebSocketLogEntry
+import com.bwc.tul.data.LogEntry
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -480,8 +493,21 @@ interface WebSocketLogDao {
 
     @Query("DELETE FROM websocket_logs WHERE timestamp < :cutoffTime")
     suspend fun deleteOldLogs(cutoffTime: Long)
+}
+
+@Dao
+interface LogDao {
+    @Insert
+    suspend fun insert(log: LogEntry)
+
+    // Change from @Insert to @Query for read operations
+    @Query("SELECT * FROM logs ORDER BY timestamp DESC")
+    suspend fun getLogs(): List<LogEntry>
+
+    @Query("DELETE FROM logs")
+    suspend fun clearAll()
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\DatabaseModels.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\DatabaseModels.kt --- 
 package com.bwc.tul.data
 
 import androidx.room.Entity
@@ -533,7 +559,22 @@ data class SessionPreview(
     val session: ConversationSession,
     val previewText: String
 ) 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\ServerModels.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\LogEntry.kt --- 
+package com.bwc.tul.data
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "logs")
+data class LogEntry(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val timestamp: Long,
+    val level: String, // e.g., "INFO", "ERROR", "NETWORK"
+    val tag: String,
+    val message: String
+) 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\ServerModels.kt --- 
 package com.bwc.tul.data
 
 import com.google.gson.annotations.SerializedName
@@ -571,7 +612,7 @@ data class SessionResumptionUpdate(@SerializedName("newHandle") val newHandle: S
 data class GoAway(@SerializedName("timeLeft") val timeLeft: String?)
 
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\TranslationRepository.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\TranslationRepository.kt --- 
 package com.bwc.tul.data // Corrected package
 
 import android.content.SharedPreferences
@@ -601,7 +642,7 @@ class TranslationRepository(
     }
 
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\UIState.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\UIState.kt --- 
 package com.bwc.tul.data
 
 import com.bwc.tul.ui.view.TranslationItem
@@ -617,11 +658,11 @@ data class UIState(
     val isConnected: Boolean = false,
     val isSending: Boolean = false,
     val isReady: Boolean = false,
-    val lastAudioSentTime: Long = 0
-)
-
- 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\data\WebSocketLogEntry.kt --- 
+    val lastAudioSentTime: Long = 0,
+    val showUserSettings: Boolean = false,
+    val showDevSettings: Boolean = false
+) 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\data\WebSocketLogEntry.kt --- 
 package com.bwc.tul.data.websocket
 
 import androidx.room.ColumnInfo
@@ -638,9 +679,9 @@ data class WebSocketLogEntry(
     @ColumnInfo(name = "is_error") val isError: Boolean = false,
     @ColumnInfo(name = "error_message") val errorMessage: String? = null
 ) {
-    enum class Direction { SENT, RECEIVED }
+    enum class Direction { SENT, RECEIVED, STATUS, ERROR }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\output\TextToSpeechManager.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\output\TextToSpeechManager.kt --- 
 // Create a new file, e.g., in a new 'output' package: output/TextToSpeechManager.kt
 package com.bwc.tul.output
 
@@ -702,7 +743,7 @@ class TextToSpeechManager(context: Context, private val onReady: () -> Unit) : T
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\TranslationAdapter.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\TranslationAdapter.kt --- 
 package com.bwc.tul.ui
 
 import android.view.LayoutInflater
@@ -761,7 +802,7 @@ class TranslationAdapter : ListAdapter<TranslationItem, TranslationAdapter.ViewH
 }
 
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\components\StatusBar.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\components\StatusBar.kt --- 
 package com.bwc.tul.ui.components
 
 import androidx.compose.foundation.layout.Column
@@ -841,7 +882,7 @@ fun StatusBarConnectedPreview() {
         )
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\components\TranslationList.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\components\TranslationList.kt --- 
 package com.bwc.tul.ui.components
 
 
@@ -996,7 +1037,7 @@ fun TranslationListPreview() {
         TranslationList(translations = sampleTranslations)
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\dialog\SettingsDialog.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\dialog\SettingsDialog.kt --- 
 package com.bwc.tul.ui.dialog
 
 import android.content.SharedPreferences
@@ -1088,86 +1129,49 @@ interface DevSettingsListener {
     fun onClearLog()
     fun onExportLogsComplete(file: File)
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\dialog\UserSettingsDialogFragment.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\dialog\UserSettingsDialog.kt --- 
 package com.bwc.tul.ui.dialog
 
-import android.content.Context
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.fragment.app.DialogFragment
+import android.content.SharedPreferences
+import androidx.compose.runtime.*
+import androidx.compose.ui.window.Dialog
 import com.bwc.tul.ui.settings.UserSettingsContent
 import com.bwc.tul.ui.theme.ThaiUncensoredLanguageTheme
 
-class UserSettingsDialogFragment : DialogFragment() {
-
-    interface UserSettingsListener {
-        fun onSettingsSaved()
-        fun onRequestPermission()
+@Composable
+fun UserSettingsDialog(
+    prefs: SharedPreferences,
+    onDismiss: () -> Unit,
+    onSave: (apiKey: String, sourceLang: String, targetLang: String) -> Unit
+) {
+    var apiKey by remember {
+        mutableStateOf(prefs.getString("api_key", "") ?: "")
+    }
+    var sourceLang by remember {
+        mutableStateOf(prefs.getString("source_lang", "en-US") ?: "en-US")
+    }
+    var targetLang by remember {
+        mutableStateOf(prefs.getString("target_lang", "th-TH") ?: "th-TH")
     }
 
-    private var listener: UserSettingsListener? = null
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        listener = context as? UserSettingsListener
-    }
-
-    override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        // MODIFICATION: Replaced XML inflation with ComposeView
-        return ComposeView(requireContext()).apply {
-            setContent {
-                // State is managed and "hoisted" here in the DialogFragment
-                val prefs = requireActivity().getSharedPreferences(
-                    "BwctransPrefs", Context.MODE_PRIVATE)
-
-                var apiKey by remember {
-                    mutableStateOf(prefs.getString("api_key", "") ?: "")
-                }
-                var sourceLang by remember {
-                    mutableStateOf(prefs.getString("source_lang", "en-US") ?: "en-US")
-                }
-                var targetLang by remember {
-                    mutableStateOf(prefs.getString("target_lang", "es-ES") ?: "es-ES")
-                }
-
-                ThaiUncensoredLanguageTheme {
-                    UserSettingsContent(
-                        apiKey = apiKey,
-                        onApiKeyChange = { apiKey = it },
-                        sourceLang = sourceLang,
-                        onSourceLangChange = { sourceLang = it },
-                        targetLang = targetLang,
-                        onTargetLangChange = { targetLang = it },
-                        onSave = {
-                            with(prefs.edit()) {
-                                putString("api_key", apiKey)
-                                putString("source_lang", sourceLang)
-                                putString("target_lang", targetLang)
-                                apply()
-                            }
-                            listener?.onSettingsSaved()
-                            dismiss()
-                        },
-                        onDismiss = {
-                            dismiss()
-                        }
-                    )
-                }
-            }
+    Dialog(onDismissRequest = onDismiss) {
+        ThaiUncensoredLanguageTheme {
+            UserSettingsContent(
+                apiKey = apiKey,
+                onApiKeyChange = { apiKey = it },
+                sourceLang = sourceLang,
+                onSourceLangChange = { sourceLang = it },
+                targetLang = targetLang,
+                onTargetLangChange = { targetLang = it },
+                onSave = {
+                    onSave(apiKey, sourceLang, targetLang)
+                },
+                onDismiss = onDismiss
+            )
         }
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\settings\DevSettingsScreen.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\settings\DevSettingsScreen.kt --- 
 package com.bwc.tul.ui.settings
 
 import androidx.compose.foundation.layout.*
@@ -1346,7 +1350,7 @@ fun DevSettingsContentPreview() {
         )
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\settings\UserSettingsScreen.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\settings\UserSettingsScreen.kt --- 
 package com.bwc.tul.ui.settings
 
 import androidx.compose.foundation.layout.Column
@@ -1436,8 +1440,8 @@ fun UserSettingsContentPreview() {
         )
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\theme\Color.kt --- 
-package com.bwc.tul.ui.theme
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\theme\Color.kt --- 
+ package com.bwc.tul.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
@@ -1448,7 +1452,7 @@ val Pink80 = Color(0xFFEFB8C8)
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260) 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\theme\Theme.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\theme\Theme.kt --- 
 package com.bwc.tul.ui.theme
 
 import android.os.Build
@@ -1506,8 +1510,8 @@ fun ThaiUncensoredLanguageTheme(
         content = content
     )
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\theme\Type.kt --- 
-package com.bwc.tul.ui.theme
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\theme\Type.kt --- 
+ package com.bwc.tul.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
@@ -1563,7 +1567,7 @@ val AppTypography = Typography(  // Changed from 'Typography' to 'AppTypography'
     labelMedium = baseline.labelMedium.copy(fontFamily = bodyFontFamily),
     labelSmall = baseline.labelSmall.copy(fontFamily = bodyFontFamily)
 ) 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\view\DebugLogScreen.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\view\DebugLogScreen.kt --- 
 package com.bwc.tul.ui.screens
 
 import androidx.compose.ui.tooling.preview.Preview
@@ -1643,8 +1647,8 @@ fun DebugLogScreenPreview() {
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\view\MainScreen.kt --- 
-package com.bwc.tul.ui.view
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\view\MainScreen.kt --- 
+ package com.bwc.tul.ui.view
 
 import androidx.compose.ui.Alignment
 import android.content.Context
@@ -1898,7 +1902,7 @@ fun MainScreenConnectedListeningPreview() {
         )
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\ui\view\TranslationItem.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\ui\view\TranslationItem.kt --- 
 package com.bwc.tul.ui.view // Added package declaration
 
 import androidx.compose.foundation.background
@@ -1965,60 +1969,129 @@ fun PreviewTranslationItemModel() {
     }
 }
  
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\util\DebugLogger.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\util\DebugLogger.kt --- 
 package com.bwc.tul.util
 
 import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.content.FileProvider
+import com.bwc.tul.data.AppDatabase
+import com.bwc.tul.data.LogDao
+import com.bwc.tul.data.LogEntry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
+/**
+ * A logger object that writes logs to a Room database and provides
+ * functionality to export them to a file.
+ */
 object DebugLogger {
     private const val TAG = "DebugLogger"
-    private val logBuilder = StringBuilder()
-    private var logFile: File? = null
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private lateinit var logDao: LogDao
 
-    @Synchronized
-    fun log(message: String) {
+    /**
+     * Initializes the DebugLogger with a LogDao instance.
+     * Must be called before using logging functions.
+     */
+    fun initialize(context: Context) {
+        logDao = AppDatabase.getDatabase(context).logDao()
+    }
+
+    /**
+     * Logs a message to the Room database.
+     * @param level The severity level of the log (e.g., "INFO", "DEBUG").
+     * @param tag The tag for the log message.
+     * @param message The content of the log message.
+     */
+    fun log(level: String, tag: String, message: String) {
+        if (!::logDao.isInitialized) {
+            Log.e(TAG, "DebugLogger not initialized. Call initialize() first.")
+            return
+        }
+
+        // Use a coroutine to avoid blocking the main thread
+        scope.launch {
+            try {
+                val logEntry = LogEntry(
+                    timestamp = System.currentTimeMillis(),
+                    level = level,
+                    tag = tag,
+                    message = message
+                )
+                logDao.insert(logEntry)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to write log to database", e)
+            }
+        }
+
+        // Print to Logcat for real-time debugging
         val timestamp = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
-        val logEntry = "[$timestamp] $message\n"
-        print(logEntry) // Also print to logcat for real-time debugging
-        logBuilder.append(logEntry)
-        // Optionally write to file immediately if performance is not an issue
-        // appendToFile(logEntry)
+        val logcatMessage = "[$timestamp] [$level/$tag]: $message"
+        when (level) {
+            "ERROR" -> Log.e(tag, logcatMessage)
+            "WARN" -> Log.w(tag, logcatMessage)
+            else -> Log.i(tag, logcatMessage)
+        }
     }
 
-    @Synchronized
-    fun getLog(): String {
-        return logBuilder.toString()
-    }
-
-    @Synchronized
+    /**
+     * Clears all logs from the database.
+     */
     fun clear() {
-        logBuilder.clear()
-        // Optionally delete the log file
-        logFile?.delete()
-        logFile = null
-        log("--- Log Cleared ---")
+        if (!::logDao.isInitialized) {
+            Log.e(TAG, "DebugLogger not initialized. Call initialize() first.")
+            return
+        }
+
+        scope.launch {
+            try {
+                logDao.clearAll()
+                log("INFO", TAG, "--- Log Cleared ---")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to clear logs from database", e)
+            }
+        }
     }
 
-    @Synchronized
-    fun getLogFileUri(context: Context): Uri? {
+    /**
+     * Retrieves all logs from the database, writes them to a text file,
+     * and returns a content URI for sharing.
+     */
+    suspend fun getLogFileUri(context: Context): Uri? {
+        if (!::logDao.isInitialized) {
+            Log.e(TAG, "DebugLogger not initialized. Call initialize() first.")
+            return null
+        }
+
         return try {
-            val logDir = File(context.getExternalFilesDir(null), "logs")
+            val allLogs = logDao.getLogs()
+            val logText = buildString {
+                allLogs.forEach { entry ->
+                    val date = SimpleDateFormat(
+                        "yyyy-MM-dd HH:mm:ss.SSS",
+                        Locale.US
+                    ).format(Date(entry.timestamp))
+                    appendLine("[$date] ${entry.level}/${entry.tag}: ${entry.message}")
+                    appendLine("-".repeat(70))
+                }
+            }
+
+            val logDir = File(context.cacheDir, "logs")
             logDir.mkdirs()
-            logFile = File(logDir, "debug_log_${System.currentTimeMillis()}.txt")
-            logFile?.writeText(getLog())
+            val logFile = File(logDir, "debug_log_${System.currentTimeMillis()}.txt")
+            logFile.writeText(logText)
 
             FileProvider.getUriForFile(
                 context,
-                "${context.packageName}.provider", // Make sure this matches your FileProvider authority
-                logFile!!
+                "${context.packageName}.provider",
+                logFile
             )
         } catch (e: Exception) {
             Log.e(TAG, "Error creating log file URI", e)
@@ -2026,37 +2099,40 @@ object DebugLogger {
         }
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\viewmodel\MainViewModel.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\viewmodel\MainViewModel.kt --- 
 package com.bwc.tul.viewmodel
 
 import android.app.Application
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.bwc.tul.audio.AudioHandler
 import com.bwc.tul.audio.AudioPlayer
+import com.bwc.tul.data.AppDatabase
 import com.bwc.tul.data.ServerResponse
 import com.bwc.tul.data.UIState
+import com.bwc.tul.ui.components.Constant
+import com.bwc.tul.ui.dialog.DevSettingsListener
+import com.bwc.tul.ui.view.TranslationItem
+import com.bwc.tul.util.DebugLogger
 import com.bwc.tul.websocket.WebSocketClient
 import com.bwc.tul.websocket.WebSocketConfig
-import com.bwc.tul.ui.view.TranslationItem
-import com.bwc.tul.ui.components.Constant
-import com.bwc.tul.util.DebugLogger
 import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class MainViewModel(
     application: Application,
     private val audioHandler: AudioHandler
-) : AndroidViewModel(application), WebSocketClient.WebSocketListener {
+) : AndroidViewModel(application), WebSocketClient.WebSocketListener, DevSettingsListener {
 
     private val _uiState = MutableStateFlow(UIState())
     val uiState = _uiState.asStateFlow()
@@ -2066,12 +2142,39 @@ class MainViewModel(
 
     private var webSocketClient: WebSocketClient? = null
     private val gson = Gson()
-    private val logger = DebugLogger
+
     private var audioPlayer: AudioPlayer? = null
     private var sessionHandle: String? = null
 
     private val prefs = application.getSharedPreferences(
         "BwctransPrefs", Context.MODE_PRIVATE)
+
+    init {
+        val logDao = AppDatabase.getDatabase(application).logDao()
+
+    }
+
+    override fun onSettingsSaved() {
+        _uiState.update { it.copy(showDevSettings = false) }
+        reloadConfiguration()
+        viewModelScope.launch {
+            _events.emit(ViewEvent.ShowToast("Dev Settings Saved. Please reconnect."))
+        }
+    }
+
+    override fun onShareLog() {
+        handleEvent(UserEvent.ShareLogRequested)
+    }
+
+    override fun onClearLog() {
+        handleEvent(UserEvent.ClearLogRequested)
+    }
+
+    override fun onExportLogsComplete(file: File) {
+        viewModelScope.launch {
+            _events.emit(ViewEvent.ExportLogsCompleted)
+        }
+    }
 
     fun handleEvent(event: UserEvent) {
         viewModelScope.launch {
@@ -2079,21 +2182,23 @@ class MainViewModel(
                 UserEvent.MicClicked -> toggleRecording()
                 UserEvent.ConnectClicked -> connectWebSocket()
                 UserEvent.DisconnectClicked -> disconnectWebSocket()
-                UserEvent.SettingsSaved -> {
+                is UserEvent.SettingsSaved -> {
+                    with(prefs.edit()) {
+                        putString("api_key", event.apiKey)
+                        putString("source_lang", event.sourceLang)
+                        putString("target_lang", event.targetLang)
+                        apply()
+                    }
+                    _uiState.update { it.copy(showUserSettings = false) }
                     reloadConfiguration()
-                    _events.emit(ViewEvent.ShowToast(
-                        "Settings Saved. Please reconnect."))
+                    _events.emit(ViewEvent.ShowToast("Settings Saved. Please reconnect."))
                 }
-                UserEvent.RequestPermission ->
-                    _events.emit(ViewEvent.ShowUserSettings)
                 UserEvent.ShareLogRequested -> handleShareLog()
                 UserEvent.ClearLogRequested -> clearDebugLog()
-                UserEvent.UserSettingsClicked ->
-                    _events.emit(ViewEvent.ShowUserSettings)
-                UserEvent.DevSettingsClicked ->
-                    _events.emit(ViewEvent.ShowDevSettings)
+                UserEvent.ShowUserSettings -> _uiState.update { it.copy(showUserSettings = true) }
+                UserEvent.ShowDevSettings -> _uiState.update { it.copy(showDevSettings = true) }
+                UserEvent.DismissDialog -> _uiState.update { it.copy(showUserSettings = false, showDevSettings = false) }
                 UserEvent.ExportLogsCompleted ->  _events.emit(ViewEvent.ShowToast("Web Socket Logs Exported"))
-
             }
         }
     }
@@ -2104,11 +2209,25 @@ class MainViewModel(
             return
         }
         logStatus("Connecting...")
-        audioPlayer?.release()
-        audioPlayer = AudioPlayer()
-        val config = buildWebSocketConfig()
-        webSocketClient = WebSocketClient(config, this, getApplication())
-        webSocketClient?.connect()
+
+        viewModelScope.launch {
+            val client = try {
+                withContext(Dispatchers.IO) {
+                    audioPlayer?.release()
+                    audioPlayer = AudioPlayer()
+                    val config = buildWebSocketConfig()
+                    WebSocketClient(config, this@MainViewModel, getApplication())
+                }
+            } catch (e: Exception) {
+                logError("Connection initialization failed: ${e.message}")
+                null
+            }
+
+            client?.let {
+                webSocketClient = it
+                it.connect()
+            }
+        }
     }
 
     private fun disconnectWebSocket() {
@@ -2168,8 +2287,10 @@ class MainViewModel(
     }
 
     override fun onMessage(text: String) {
-        logger.log("IN: $text")
-        _uiState.update { it.copy(debugLog = logger.getLog()) }
+        // Corrected call to logger.log
+
+        DebugLogger.log("INFO", "WebSocket", "IN: $text")
+        // Removed updating the on-screen debug log, as it's now in the database
         try {
             val response = gson.fromJson(text, ServerResponse::class.java)
 
@@ -2231,13 +2352,7 @@ class MainViewModel(
     private fun addOrUpdateTranslation(text: String, isUser: Boolean) {
         _uiState.update { currentState ->
             val newItem = TranslationItem(text = text, isUser = isUser)
-            val newTranslations = currentState.translations.toMutableList().apply {
-                if (isNotEmpty() && first().isUser == isUser) {
-                    set(0, newItem)
-                } else {
-                    add(0, newItem)
-                }
-            }
+            val newTranslations = listOf(newItem) + currentState.translations
             currentState.copy(translations = newTranslations)
         }
     }
@@ -2250,28 +2365,29 @@ class MainViewModel(
     }
 
     private fun handleShareLog() = viewModelScope.launch {
-        logger.getLogFileUri(getApplication())?.let { uri ->
+        DebugLogger.getLogFileUri(getApplication())?.let { uri ->
             _events.emit(ViewEvent.ShareLogFile(uri))
         } ?: _events.emit(ViewEvent.ShowToast("Log file not available."))
     }
 
-    private fun clearDebugLog() = viewModelScope.launch {
-        logger.clear()
+    private suspend fun clearDebugLog() {
+        DebugLogger.clear()
+        // Removed on-screen log clearing, as it's deprecated
         _uiState.update { it.copy(debugLog = "") }
-        _events.emit(ViewEvent.ShowToast("On-screen log cleared."))
+        _events.emit(ViewEvent.ShowToast("Debug log database cleared."))
     }
 
     private fun logStatus(message: String) {
-        Log.i("MainViewModel", message)
-        logger.log(message)
-        _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
+        // Corrected call
+        DebugLogger.log("INFO", "MainViewModel", message)
+        _uiState.update { it.copy(statusText = message) }
     }
 
     private fun logError(message: String) {
-        Log.e("MainViewModel", message)
-        logger.log("ERROR: $message")
+        // Corrected call
+        DebugLogger.log("ERROR", "MainViewModel", message)
         viewModelScope.launch { _events.emit(ViewEvent.ShowError(message)) }
-        _uiState.update { it.copy(statusText = message, debugLog = logger.getLog()) }
+        _uiState.update { it.copy(statusText = message) }
     }
 
     private fun buildWebSocketConfig(): WebSocketConfig {
@@ -2279,7 +2395,7 @@ class MainViewModel(
             host = prefs.getString("api_host",
                 "generativelanguage.googleapis.com")!!,
             modelName = prefs.getString("selected_model",
-                "gemini-2.5-flash-preview-native-audio-dialog")!!,
+                "gemini-1.5-flash-preview-native-audio-dialog")!!,
             vadSilenceMs = prefs.getInt("vad_sensitivity_ms", 800),
             apiVersion = prefs.getString("api_version", "v1alpha")!!,
             apiKey = prefs.getString("api_key", "")!!,
@@ -2299,25 +2415,23 @@ class MainViewModel(
         data class ShowToast(val message: String) : ViewEvent()
         data class ShowError(val message: String) : ViewEvent()
         data class ShareLogFile(val uri: Uri) : ViewEvent()
-        object ShowUserSettings : ViewEvent()
-        object ShowDevSettings : ViewEvent()
-        object ExportLogsCompleted: ViewEvent() //Added
+        object ExportLogsCompleted: ViewEvent()
     }
 
     sealed class UserEvent {
         object MicClicked : UserEvent()
         object ConnectClicked : UserEvent()
         object DisconnectClicked : UserEvent()
-        object SettingsSaved : UserEvent()
-        object RequestPermission : UserEvent()
+        data class SettingsSaved(val apiKey: String, val sourceLang: String, val targetLang: String) : UserEvent()
         object ShareLogRequested : UserEvent()
         object ClearLogRequested : UserEvent()
-        object UserSettingsClicked : UserEvent()
-        object DevSettingsClicked : UserEvent()
-        object ExportLogsCompleted: UserEvent()  //Added
+        object ShowUserSettings : UserEvent()
+        object ShowDevSettings : UserEvent()
+        object DismissDialog : UserEvent()
+        object ExportLogsCompleted: UserEvent()
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\viewmodel\MainViewModelFactory.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\viewmodel\MainViewModelFactory.kt --- 
 package com.bwc.tul.viewmodel
 
 import android.app.Application
@@ -2337,16 +2451,18 @@ class MainViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketClient.kt --- 
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketClient.kt --- 
 package com.bwc.tul.websocket
 
 import android.util.Log
-import com.bwc.tul.data.websocket.WebSocketInterceptor
 import com.google.gson.Gson
 import okhttp3.*
 import okio.ByteString
 import java.util.concurrent.TimeUnit
 import android.content.Context
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 private enum class ClientState {
     IDLE, CONNECTING, AWAITING_SETUP_COMPLETE, READY
@@ -2363,15 +2479,17 @@ data class WebSocketConfig(    val host: String,
 class WebSocketClient(
     private val config: WebSocketConfig,
     private val listener: WebSocketListener,
-    private val context: Context // line 28 Added context
+    private val context: Context
 ) {
     private var webSocket: WebSocket? = null
     private var state: ClientState = ClientState.IDLE
     private val gson = Gson()
+    private val scope = CoroutineScope(Dispatchers.IO)
+    private val webSocketLogger by lazy { WebSocketLogger(context) }
 
     private val okHttpClient = OkHttpClient.Builder()
         .readTimeout(0, TimeUnit.MILLISECONDS)
-        .addInterceptor(WebSocketInterceptor(context, config.host)) // line 36 Added interceptor
+        .addInterceptor(WebSocketInterceptor(context, config.host))
         .build()
 
     interface WebSocketListener {
@@ -2382,7 +2500,7 @@ class WebSocketClient(
         fun onError(message: String)
     }
 
-    fun connect() {
+   fun connect() {
         if (state != ClientState.IDLE) {
             Log.w("WebSocketClient", "Already connecting or connected.")
             return
@@ -2396,9 +2514,13 @@ class WebSocketClient(
             .addPathSegments("${config.apiVersion}/models/${config.modelName}:generateAnswer")
             .addQueryParameter("key", config.apiKey)
             .build()
+			
+			scope.launch {
+        webSocketLogger.logStatus(url.toString(), "Attempting to connect...")
+    }
 
         val request = Request.Builder().url(url).build()
-        webSocket = okHttpClient.newWebSocket(request, SocketListener())
+        webSocket = okHttpClient.newWebSocket(request, SocketListener(url.toString()))
     }
 
     fun sendAudio(data: ByteArray) {
@@ -2407,6 +2529,11 @@ class WebSocketClient(
             return
         }
         webSocket?.send(ByteString.of(*data))
+        webSocket?.request()?.url?.toString()?.let { url ->
+            scope.launch {
+                webSocketLogger.logSentMessage(url, "[AUDIO DATA of size ${data.size}]")
+            }
+        }
     }
 
     fun disconnect() {
@@ -2415,13 +2542,15 @@ class WebSocketClient(
         webSocket = null
     }
 
-    private inner class SocketListener : okhttp3.WebSocketListener() {
+    private inner class SocketListener(private val url: String) : okhttp3.WebSocketListener() {
         override fun onOpen(ws: WebSocket, response: Response) {
+            scope.launch { webSocketLogger.logReceivedMessage(url, "Connection Opened: ${response.code}") }
             listener.onConnectionOpen()
             sendSetupMessage(ws)
         }
 
         override fun onMessage(ws: WebSocket, text: String) {
+            scope.launch { webSocketLogger.logReceivedMessage(url, text) }
             if (state == ClientState.AWAITING_SETUP_COMPLETE) {
                 if (text.contains("\"setupComplete\"")) {
                     Log.d("WebSocketClient", "State -> READY")
@@ -2438,11 +2567,13 @@ class WebSocketClient(
 
         override fun onClosing(ws: WebSocket, code: Int, reason: String) {
             state = ClientState.IDLE
+            scope.launch { webSocketLogger.logReceivedMessage(url, "Closing: $code / $reason") }
             listener.onClose(reason)
         }
 
         override fun onFailure(ws: WebSocket, t: Throwable, response: Response?) {
             state = ClientState.IDLE
+            scope.launch { webSocketLogger.logError(url, "Failure: ${t.message}", t.stackTraceToString()) }
             listener.onError(t.message ?: "Unknown WebSocket error")
         }
     }
@@ -2470,6 +2601,7 @@ class WebSocketClient(
         val setupJson = gson.toJson(setupMessage)
         Log.d("WebSocketClient", "Sending setup message...")
         ws.send(setupJson)
+        scope.launch { webSocketLogger.logSentMessage(ws.request().url.toString(), setupJson) }
     }
 
     private fun createSystemInstruction(instruction: String): Map<String, Any> {
@@ -2480,18 +2612,17 @@ class WebSocketClient(
         )
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketInterceptor.kt --- 
-package com.bwc.tul.data.websocket
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketInterceptor.kt --- 
+package com.bwc.tul.websocket
 
 import android.content.Context
-import okhttp3.*
-import okio.IOException
-import com.bwc.tul.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import okhttp3.Interceptor
 import okhttp3.Response
+import okio.IOException
 class WebSocketInterceptor(
     private val context: Context,
     private val baseUrl: String
@@ -2501,14 +2632,26 @@ class WebSocketInterceptor(
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        val response = chain.proceed(request)
-
-        return if (isWebSocketUpgrade(response)) {
-            return response.newBuilder()
-                .build()
-        } else {
-            response
+        scope.launch {
+            logger.logSentMessage(request.url.toString(), "--> HTTP Upgrade Request: ${request.method} ${request.url}\n${request.headers}")
         }
+
+        val response: Response
+        try {
+            response = chain.proceed(request)
+        } catch (e: IOException) {
+            scope.launch { logger.logError(request.url.toString(), "<-- HTTP Upgrade FAILED", e.stackTraceToString())}
+            throw e
+        }
+
+        scope.launch {
+            if (isWebSocketUpgrade(response)) {
+                logger.logStatus(request.url.toString(), "<-- HTTP Upgrade Response: ${response.code} ${response.message}\n${response.headers}")
+            } else {
+                logger.logError(request.url.toString(), "<-- Non-websocket response", "Code: ${response.code}\nHeaders: ${response.headers}")
+            }
+        }
+        return response
     }
 
     private fun isWebSocketUpgrade(response: Response): Boolean {
@@ -2517,37 +2660,12 @@ class WebSocketInterceptor(
                 response.header("Upgrade")?.equals("websocket", ignoreCase = true) == true
     }
 
-    private fun createEventListener(url: String): EventListener {
-        return object : EventListener() {
-            override fun callStart(call: Call) {
-                super.callStart(call)
-                scope.launch {
-                    logger.logSentMessage(url, "WebSocket connection initiated")
-                }
-            }
-
-            override fun callEnd(call: Call) {
-                super.callEnd(call)
-                scope.launch {
-                    logger.logSentMessage(url, "WebSocket connection closed")
-                }
-            }
-
-            override fun callFailed(call: Call, ioe: IOException) {
-                super.callFailed(call, ioe)
-                scope.launch {
-                    logger.logSentMessage(url, "WebSocket connection failed: ${ioe.message}")
-                }
-            }
-        }
-    }
-
     fun shutdown() {
         scope.coroutineContext.cancel()
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketLogExporter.kt --- 
-package com.bwc.tul.ui.components
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketLogExporter.kt --- 
+ package com.bwc.tul.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -2555,7 +2673,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.bwc.tul.data.websocket.WebSocketLogger
+import com.bwc.tul.websocket.WebSocketLogger
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -2589,22 +2707,18 @@ fun WebSocketLogExporter(
         }
     }
 } 
---- File: D:\ANDROID\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketLogger.kt --- 
-package com.bwc.tul.data.websocket
+--- File: D:\ANDROID\Projects\TUL\app\src\main\java\com\bwc\tul\websocket\WebSocketLogger.kt --- 
+package com.bwc.tul.websocket
 
 
-import androidx.room.*
+import android.content.Context
+import com.bwc.tul.data.AppDatabase
+import com.bwc.tul.data.websocket.WebSocketLogEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
 import java.util.*
-import android.content.Context
-import com.bwc.tul.data.AppDatabase
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import com.bwc.tul.websocket.*
 
 
 class WebSocketLogger(private val context: Context) {
@@ -2626,6 +2740,28 @@ class WebSocketLogger(private val context: Context) {
                 direction = WebSocketLogEntry.Direction.RECEIVED,
                 url = url,
                 message = if (isAudioMessage(message)) "[AUDIO DATA]" else message
+            )
+        )
+    }
+
+    suspend fun logStatus(url: String, message: String) = withContext(Dispatchers.IO) {
+        dao.insert(
+            WebSocketLogEntry(
+                direction = WebSocketLogEntry.Direction.STATUS,
+                url = url,
+                message = message
+            )
+        )
+    }
+
+    suspend fun logError(url: String, message: String, error: String?) = withContext(Dispatchers.IO) {
+        dao.insert(
+            WebSocketLogEntry(
+                direction = WebSocketLogEntry.Direction.ERROR,
+                url = url,
+                message = message,
+                isError = true,
+                errorMessage = error
             )
         )
     }

@@ -1,4 +1,4 @@
-package com.bwc.tul.ui.view
+ package com.bwc.tul.ui.view
 
 import androidx.compose.ui.Alignment
 import android.content.Context

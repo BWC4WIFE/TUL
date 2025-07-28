@@ -5,14 +5,16 @@ import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.bwc.tul.data.websocket.WebSocketLogEntry
+import com.bwc.tul.data.LogEntry
 import java.util.Date
 
-@Database(entities = [ConversationSession::class, TranslationEntry::class, WebSocketLogEntry::class], version = 3, exportSchema = false)
-@TypeConverters(AppDatabase.Converters::class) // Reference nested Converters class
+@Database(entities = [ConversationSession::class, TranslationEntry::class, WebSocketLogEntry::class, LogEntry::class], version = 4, exportSchema = false)
+@TypeConverters(AppDatabase.Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun sessionDao(): SessionDao
     abstract fun entryDao(): EntryDao
     abstract fun webSocketLogDao(): WebSocketLogDao
+    abstract fun logDao(): LogDao
 
     companion object {
         @Volatile
@@ -25,7 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "translator_database"
                 )
-                    .addMigrations(MIGRATION_2_3)
+                    .addMigrations(MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance
@@ -43,6 +45,20 @@ abstract class AppDatabase : RoomDatabase() {
                         `message` TEXT NOT NULL,
                         `is_error` INTEGER NOT NULL DEFAULT 0,
                         `error_message` TEXT
+                    )
+                """)
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `logs` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        `level` TEXT NOT NULL,
+                        `tag` TEXT NOT NULL,
+                        `message` TEXT NOT NULL
                     )
                 """)
             }
